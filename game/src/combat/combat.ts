@@ -11,13 +11,13 @@ import { waveH } from '../render/water';
 import { t } from '../i18n/zh';
 
 export const WEAPONS = {
-  cannon: { range: 56, arc: 0.44, cool: 2.4, dmg: 26, speed: 70, splash: 3.5 },
-  gun: { range: 36, arc: 0.95, cool: 0.15, dmg: 3, speed: 115, splash: 0 },
+  cannon: { range: 56, arc: 0.44, cool: 4.0, dmg: 40, speed: 70, splash: 3.5, burst: 1, gap: 0 },
+  gun: { range: 36, arc: 0.95, cool: 1.6, dmg: 4, speed: 115, splash: 0, burst: 5, gap: 0.12 },
 };
 export const PLAYER_HULL = 120;
 const HARPOON_STEAL_TIME = 3.5, TETHER_SNAP = 60;
 
-interface Mount { p: Placed; kind: 'cannon' | 'gun'; local: THREE.Vector3; dir: THREE.Vector3; cool: number }
+interface Mount { p: Placed; kind: 'cannon' | 'gun'; local: THREE.Vector3; dir: THREE.Vector3; cool: number; shots: number }
 interface Proj { kind: 'bullet' | 'shell' | 'harpoon' | 'mortar'; mesh: THREE.Object3D; pos: THREE.Vector3; vel: THREE.Vector3; life: number; dmg: number; from?: Enemy; start?: THREE.Vector3; target?: THREE.Vector3; k?: number; dur?: number; ring?: THREE.Mesh }
 
 export interface CombatHooks {
@@ -72,7 +72,7 @@ export class Combat {
     this.mounts = layout.placed.filter((p) => p.type === 'cannon' || p.type === 'gun').map((p) => {
       const side = p.type === 'cannon' ? 0 : sideOf(p);
       const c = cellCenter(p.c, p.r, pw(p), ph(p));
-      return { p, kind: p.type as 'cannon' | 'gun', local: new THREE.Vector3(c.x, DECK + 1.1, c.z), dir: side === 0 ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(side, 0, 0), cool: 0 };
+      return { p, kind: p.type as 'cannon' | 'gun', local: new THREE.Vector3(c.x, DECK + 1.1, c.z), dir: side === 0 ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(side, 0, 0), cool: 0, shots: 0 };
     });
     for (const kind of Object.keys(spawn) as EnemyKind[]) {
       for (let n = 0; n < spawn[kind]; n++) {
@@ -202,7 +202,9 @@ export class Combat {
       this.projs.push({ kind: m.kind === 'cannon' ? 'shell' : 'bullet', mesh, pos: muzzle, vel: aim.multiplyScalar(W.speed), life: W.range / W.speed + 0.15, dmg: W.dmg });
       this.fx.muzzle(muzzle.x, muzzle.y, muzzle.z, m.kind === 'cannon' ? 1.6 : 0.7);
       if (m.kind === 'cannon') this.fx.smoke(muzzle.x, muzzle.y, muzzle.z, false);
-      m.cool = W.cool;
+      // guns fire in short bursts, then pause; the cannon reloads after every shot
+      m.shots++;
+      if (m.shots >= W.burst) { m.shots = 0; m.cool = W.cool; } else m.cool = W.gap;
     }
   }
 
