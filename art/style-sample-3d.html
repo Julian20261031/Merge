@@ -1,0 +1,709 @@
+<title>锈海 3D 样张</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* layout: one dark-sea column — the live 3D stage with its controls, then a 2D-vs-3D comparison table */
+:root {
+  --sea: #0e2c33;
+  --line: #2a5660;
+  --bone: #eadcbc;
+  --bone-dim: #b3a88f;
+  --ink: #22170f;
+  --rust: #d0612f;
+  --signal: #f2c230;
+  --f-display: 'ZCOOL XiaoWei', 'Songti SC', 'STSong', serif;
+  --f-body: -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  color-scheme: dark;
+}
+html { background: var(--sea); }
+body { background: var(--sea); color: var(--bone); font-family: var(--f-body); font-size: 15px; line-height: 1.7; }
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+  display: grid; gap: 40px;
+}
+header { display: grid; gap: 10px; max-width: 46rem; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .12em; color: var(--bone-dim); text-transform: uppercase; }
+h1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(40px, 7vw, 68px); line-height: 1.05; margin: 0; letter-spacing: .04em; text-wrap: balance; }
+h1 span { color: var(--rust); }
+h2 { font-family: var(--f-display); font-weight: 400; font-size: 28px; line-height: 1.2; margin: 0; letter-spacing: .03em; }
+p { margin: 0; max-width: 42rem; }
+.lead { font-size: 16px; color: var(--bone-dim); }
+.lead a, footer a, td a { color: var(--bone); }
+.stage-wrap { display: grid; gap: 14px; }
+.stage { position: relative; width: 100%; aspect-ratio: 16 / 10; max-width: 100%; border-radius: 4px; overflow: hidden; background: #0e3540; box-shadow: 0 18px 60px rgba(0, 0, 0, .45); }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; cursor: grab; }
+.stage canvas:active { cursor: grabbing; }
+.grain, .vignette { position: absolute; inset: 0; pointer-events: none; }
+.grain { mix-blend-mode: multiply; opacity: .32; }
+.vignette { background: radial-gradient(ellipse at center, rgba(4, 18, 24, 0) 55%, rgba(4, 18, 24, .5) 100%); }
+.hud { position: absolute; pointer-events: none; font-family: var(--f-display); color: var(--ink); }
+.hud.panel { top: 3%; left: 2%; background: rgba(230, 214, 178, .94); border: 2.5px solid var(--ink); border-radius: 3px 6px 4px 5px; padding: 8px 14px; display: grid; gap: 2px; font-size: clamp(11px, 1.5vw, 17px); transform: rotate(-.4deg); }
+.hud .row { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.hud .bar { width: clamp(60px, 11vw, 140px); height: .8em; border: 2px solid var(--ink); border-radius: 2px; position: relative; }
+.hud .bar i { position: absolute; inset: 1px auto 1px 1px; width: 60%; background: var(--rust); }
+.hud .num { font-family: var(--f-mono); font-weight: 500; }
+.hud.stick { left: 3%; bottom: 5%; width: clamp(56px, 10vw, 112px); aspect-ratio: 1; border-radius: 50%; border: 2.5px solid rgba(230, 214, 178, .6); background: rgba(4, 22, 28, .25); }
+.hud.stick::after { content: ""; position: absolute; width: 42%; aspect-ratio: 1; border-radius: 50%; left: 42%; top: 18%; background: rgba(230, 214, 178, .85); border: 2px solid var(--ink); }
+.hud.btn { border-radius: 50%; background: rgba(230, 214, 178, .92); border: 2.5px solid var(--ink); display: grid; place-items: center; }
+.hud.b1 { right: 3%; bottom: 6%; width: clamp(44px, 7vw, 82px); aspect-ratio: 1; font-size: clamp(12px, 1.7vw, 20px); }
+.hud.b2 { right: calc(3% + clamp(44px, 7vw, 82px) + 12px); bottom: 3%; width: clamp(32px, 5vw, 60px); aspect-ratio: 1; font-size: clamp(10px, 1.3vw, 15px); }
+.controls { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; }
+.seg { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.seg > span { font-size: 13px; color: var(--bone-dim); }
+.seg .opts { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; color: var(--bone-dim); background: transparent; border: 0; padding: 6px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--bone); color: var(--sea); }
+.seg button:focus-visible { outline: 2px solid var(--signal); outline-offset: -2px; }
+.hint { font-size: 13px; color: var(--bone-dim); }
+section { display: grid; gap: 16px; }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 500; color: var(--bone-dim); font-size: 13px; }
+td:first-child { color: var(--bone); white-space: nowrap; }
+td { color: var(--bone-dim); }
+td.win { color: var(--bone); }
+footer { font-size: 12px; color: var(--bone-dim); border-top: 1px solid var(--line); padding-top: 16px; }
+@media (max-width: 640px) { .stage { aspect-ratio: 4 / 5; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">画风样张 · 3D 版</div>
+    <h1>锈海<span>三维</span></h1>
+    <p class="lead">和 <a href="https://claude.ai/artifact/EqZ9TeCqtNaoJX8vExiBNf" target="_blank" rel="noopener">2D 手绘版</a> 同一个场景，改用 3D 卡通渲染：色阶光影加墨线描边，描边同样会“沸腾”。所有模型都是代码搭出来的，没有用一张图片或一个模型文件。</p>
+  </header>
+
+  <div class="stage-wrap">
+    <div class="stage" id="stage">
+      <canvas id="gl" aria-label="3D 游戏画面样张：拼装船在淹没城市的楼顶之间，右上方一艘鱼叉艇正在瞄准"></canvas>
+      <div class="grain" id="grain"></div>
+      <div class="vignette"></div>
+      <div class="hud panel" aria-hidden="true">
+        <div class="row">燃料 <span class="bar"><i></i></span></div>
+        <div class="row">货值 <span class="num">1,240</span>&nbsp; 潮汐 <span class="num">03:12</span></div>
+      </div>
+      <div class="hud stick" aria-hidden="true"></div>
+      <div class="hud btn b2" aria-hidden="true">整理</div>
+      <div class="hud btn b1" aria-hidden="true">冲刺</div>
+    </div>
+    <div class="controls">
+      <div class="seg"><span>视角</span><div class="opts" role="group" aria-label="视角">
+        <button type="button" id="v-tilt" data-view="tilt" aria-pressed="true">斜俯视</button>
+        <button type="button" id="v-top" data-view="top" aria-pressed="false">正俯视</button>
+        <button type="button" id="v-low" data-view="low" aria-pressed="false">低角度</button>
+      </div></div>
+      <div class="seg"><span>动画节奏</span><div class="opts" role="group" aria-label="动画节奏">
+        <button type="button" id="r-two" data-rate="2" aria-pressed="true">一拍二</button>
+        <button type="button" id="r-one" data-rate="1" aria-pressed="false">流畅</button>
+      </div></div>
+      <div class="seg"><span>线条沸腾</span><div class="opts" role="group" aria-label="线条沸腾">
+        <button type="button" id="b-on" data-boil="1" aria-pressed="true">开</button>
+        <button type="button" id="b-off" data-boil="0" aria-pressed="false">关</button>
+      </div></div>
+    </div>
+    <p class="hint">左右拖动画面可以转镜头。“一拍二”是每秒 12 帧的手绘动画节奏，“流畅”是正常 60 帧。</p>
+  </div>
+
+  <section>
+    <h2>2D 和 3D 怎么选</h2>
+    <div class="tbl">
+      <table>
+        <thead><tr><th></th><th>2D 手绘</th><th>3D 卡通渲染</th></tr></thead>
+        <tbody>
+          <tr><td>手绘感</td><td class="win">强，每根线都在抖</td><td>弱一些，靠描边和色阶来模拟</td></tr>
+          <tr><td>画面质感</td><td>独立游戏、插画感</td><td class="win">有体积和镜头，看起来更“大”</td></tr>
+          <tr><td>下船进楼</td><td>每层楼单独一张地图</td><td class="win">楼层、楼梯、水下都很直观</td></tr>
+          <tr><td>网格背包</td><td class="win">俯视下和船上位置一一对应</td><td>要切到正俯视镜头才看得清</td></tr>
+          <tr><td>iPad 性能</td><td class="win">轻，不怎么发热</td><td>能跑，但更耗电、更热</td></tr>
+          <tr><td>开发量</td><td class="win">小</td><td>大约 1.5–2 倍：镜头、遮挡、碰撞都要处理</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>使用 Three.js r128 渲染。描边、色阶和沸腾的做法参考 <a href="https://github.com/Vincentwei1021/mg-styles-15" target="_blank" rel="noopener">mg-styles-15</a>（MIT 许可）的手绘技法，模型和代码为本项目原创。</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+const PAL = {
+  ink: 0x22170f, foam: 0xe9efe2, rust: 0xc4562a, rustD: 0x7f3419, wood: 0xc29a68, woodL: 0xd4b07a,
+  bone: 0xe6d6b2, conc: 0xaba395, concD: 0x7b7468, steel: 0x8d9894, steelD: 0x5d6764, sig: 0xf2c230,
+  red: 0xb5302a, plant: 0x6e8b47, plant2: 0x87a35a, water: 0x6fa3b3, dark: 0x3a3833, tar: 0x4a352b, sand: 0xb9a57e,
+};
+const FD = "'ZCOOL XiaoWei', 'Songti SC', serif";
+const REDUCE = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const css = (n) => '#' + n.toString(16).padStart(6, '0');
+function hs(...a) {
+  let h = 2166136261 >>> 0;
+  for (const v of a) { h = Math.imul(h ^ ((Math.round(v * 997) | 0) >>> 0), 16777619) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995) >>> 0; h ^= h >>> 15; }
+  return (h >>> 0) / 4294967296;
+}
+
+// ------------------------------------------------------------------ paper grain overlay (same as the 2D sample)
+(function grain() {
+  const g = document.createElement('canvas'); g.width = g.height = 256;
+  const x = g.getContext('2d'), id = x.createImageData(256, 256);
+  for (let i = 0; i < 65536; i++) { const n = 205 + Math.floor(hs(i, 77) * 50); id.data[i * 4] = n; id.data[i * 4 + 1] = n - 2; id.data[i * 4 + 2] = n - 8; id.data[i * 4 + 3] = 255; }
+  x.putImageData(id, 0, 0);
+  const el = document.getElementById('grain');
+  el.style.backgroundImage = `url(${g.toDataURL()})`;
+  el.style.backgroundSize = '256px 256px';
+})();
+
+if (!window.THREE) {
+  document.getElementById('stage').insertAdjacentHTML('beforeend', '<p style="position:absolute;inset:auto 16px 16px;color:#eadcbc">3D 引擎没有加载成功，请检查网络后刷新页面。</p>');
+  return;
+}
+
+// ------------------------------------------------------------------ renderer
+const canvas = document.getElementById('gl');
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+renderer.setClearColor(0x0e3540);
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0e3540, 80, 165);
+const camera = new THREE.PerspectiveCamera(38, 16 / 10, 1, 400);
+
+scene.add(new THREE.HemisphereLight(0xfff1d6, 0x123a44, 0.55));
+const sun = new THREE.DirectionalLight(0xfff3dc, 0.8);
+sun.position.set(-40, 70, -30);
+scene.add(sun);
+
+// toon ramp: three flat tones, like hand colouring
+const ramp = new THREE.DataTexture(new Uint8Array([80, 165, 255]), 3, 1, THREE.LuminanceFormat);
+ramp.minFilter = ramp.magFilter = THREE.NearestFilter; ramp.generateMipmaps = false; ramp.needsUpdate = true;
+const matCache = new Map();
+function toon(color, map) {
+  const key = map ? null : color;
+  if (key !== null && matCache.has(key)) return matCache.get(key);
+  const m = new THREE.MeshToonMaterial({ color: map ? 0xffffff : color, gradientMap: ramp, map: map || null });
+  if (key !== null) matCache.set(key, m);
+  return m;
+}
+
+// ------------------------------------------------------------------ boiling ink outline (inverted hull)
+const NOISE = `
+float h31(vec3 p){ p = fract(p * 0.3183 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float vn3(vec3 x){ vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(h31(i), h31(i + vec3(1,0,0)), f.x), mix(h31(i + vec3(0,1,0)), h31(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(h31(i + vec3(0,0,1)), h31(i + vec3(1,0,1)), f.x), mix(h31(i + vec3(0,1,1)), h31(i + vec3(1,1,1)), f.x), f.y), f.z); }`;
+const U = { uStep: { value: 0 }, uBoil: { value: 1 } };
+function outlineMat(thick) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uStep: U.uStep, uBoil: U.uBoil, uT: { value: thick }, uC: { value: new THREE.Color(PAL.ink) } },
+    side: THREE.BackSide,
+    vertexShader: NOISE + `
+      uniform float uStep, uBoil, uT;
+      void main(){
+        vec3 dir = normalize(position + vec3(1e-4));
+        float n = vn3(position * 1.4 + vec3(uStep * 3.7));
+        float k = 1.0 + uBoil * (n - 0.5) * 1.5;
+        vec3 p = position + dir * uT * k;
+        p.xz += uBoil * 0.05 * vec2(vn3(position * 2.0 + uStep * 5.1) - 0.5, vn3(position * 2.0 + uStep * 5.1 + 9.0) - 0.5);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+      }`,
+    fragmentShader: `uniform vec3 uC; void main(){ gl_FragColor = vec4(uC, 1.0); }`,
+  });
+}
+const OUT = { thin: outlineMat(0.13), mid: outlineMat(0.2), thick: outlineMat(0.32) };
+
+function part(parent, geo, mat, x = 0, y = 0, z = 0, o = {}) {
+  geo.computeBoundingBox();
+  const c = geo.boundingBox.getCenter(new THREE.Vector3());
+  geo.translate(-c.x, -c.y, -c.z);
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x + c.x, y + c.y, z + c.z);
+  if (o.rx) m.rotation.x = o.rx;
+  if (o.ry) m.rotation.y = o.ry;
+  if (o.rz) m.rotation.z = o.rz;
+  if (o.outline !== false) m.add(new THREE.Mesh(geo, OUT[o.outline || 'thin']));
+  parent.add(m);
+  return m;
+}
+const seg = (d) => Math.max(1, Math.ceil(d / 1.4));
+const box = (w, h, d) => new THREE.BoxGeometry(w, h, d, seg(w), seg(h), seg(d));
+const cyl = (r, h, n = 14) => new THREE.CylinderGeometry(r, r, h, n, seg(h));
+
+// ------------------------------------------------------------------ canvas textures
+const TEXS = [];
+function tex(w, h, draw, repeat) {
+  const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+  const x = cv.getContext('2d'); draw(x, w, h);
+  const t = new THREE.CanvasTexture(cv);
+  TEXS.push(() => { x.setTransform(1, 0, 0, 1, 0, 0); x.globalAlpha = 1; x.clearRect(0, 0, w, h); draw(x, w, h); t.needsUpdate = true; });
+  t.anisotropy = 4;
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat[0], repeat[1]); }
+  return t;
+}
+function inkLine(x, pts, w, color, alpha = 1) {
+  x.save(); x.globalAlpha = alpha; x.strokeStyle = color; x.lineWidth = w; x.lineCap = 'round'; x.lineJoin = 'round';
+  x.beginPath(); pts.forEach(([a, b], i) => (i ? x.lineTo(a, b) : x.moveTo(a, b))); x.stroke(); x.restore();
+}
+function mottle(x, w, h, base, dark, n, seed) {
+  x.fillStyle = base; x.fillRect(0, 0, w, h);
+  for (let i = 0; i < n; i++) {
+    const cx = hs(seed, i, 1) * w, cy = hs(seed, i, 2) * h, r = 10 + hs(seed, i, 3) * w * 0.12;
+    const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, dark); g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+  }
+}
+
+// ------------------------------------------------------------------ water
+const ROOFS = [
+  { x: -36.5, z: -15, w: 23, d: 15, rot: -0.06, top: 2.0, type: 'tank' },
+  { x: 41, z: 17, w: 17, d: 17, rot: 0.1, top: 1.6, type: 'pad' },
+  { x: 20, z: -33.5, w: 10.4, d: 8.4, rot: -0.32, top: 3.2, type: 'stair' },
+];
+const BILL = { x: -30, z: 18.7, rot: 0.2 };
+const waveH = (x, z, t) => 0.16 * Math.sin(x * 0.21 + t * 1.1) + 0.12 * Math.sin(z * 0.27 - t * 0.9 + x * 0.05) + 0.06 * Math.sin((x + z) * 0.5 + t * 1.7);
+const BOAT = { x: -4, z: 8, yaw: -0.42 };
+const FWD = new THREE.Vector2(Math.sin(0.42), -Math.cos(0.42));   // bow direction on the water (x, z)
+const water = new THREE.Mesh(
+  (() => { const g = new THREE.PlaneGeometry(260, 190, 130, 95); g.rotateX(-Math.PI / 2); return g; })(),
+  new THREE.ShaderMaterial({
+    uniforms: {
+      uTime: { value: 0 }, uStep: U.uStep, uBoil: U.uBoil,
+      uR: { value: [...ROOFS.map((r) => new THREE.Vector4(r.x, r.z, r.w / 2, r.d / 2)), new THREE.Vector4(BILL.x, BILL.z, 9, 2.2)] },
+      uA: { value: [...ROOFS.map((r) => r.rot), BILL.rot] },
+      uFlow: { value: FWD.clone().multiplyScalar(-1.3) },
+      uDeep: { value: new THREE.Color(0x0e3540) }, uMid: { value: new THREE.Color(0x24646c) },
+      uShal: { value: new THREE.Color(0x5aa79c) }, uFoam: { value: new THREE.Color(PAL.foam) },
+      uFogC: { value: new THREE.Color(0x0e3540) },
+    },
+    vertexShader: `
+      uniform float uTime; varying vec3 vW; varying float vH;
+      float wv(vec2 p, float t){ return 0.16*sin(p.x*0.21+t*1.1) + 0.12*sin(p.y*0.27-t*0.9+p.x*0.05) + 0.06*sin((p.x+p.y)*0.5+t*1.7); }
+      void main(){
+        vec4 w = modelMatrix * vec4(position, 1.0);
+        float h = wv(w.xz, uTime); w.y += h; vH = h; vW = w.xyz;
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }`,
+    fragmentShader: `
+      uniform float uTime, uStep, uBoil; uniform vec4 uR[4]; uniform float uA[4]; uniform vec2 uFlow;
+      uniform vec3 uDeep, uMid, uShal, uFoam, uFogC;
+      varying vec3 vW; varying float vH;
+      float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+      float vn2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
+        return mix(mix(h21(i), h21(i+vec2(1,0)), f.x), mix(h21(i+vec2(0,1)), h21(i+vec2(1,1)), f.x), f.y); }
+      float sdb(vec2 p, vec2 b){ vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
+      void main(){
+        vec2 p = vW.xz;
+        float g = clamp((p.x + p.y * 0.7 + 70.0) / 160.0, 0.0, 1.0);
+        vec3 col = mix(uMid, uDeep, g);
+        // the drowned street grid, far below
+        vec2 q = (p + vec2(300.0)) / vec2(17.0, 15.0);
+        float blk = step(0.16, fract(q.x)) * step(0.16, fract(q.y)) * step(0.3, h21(floor(q)));
+        col += vec3(0.02, 0.045, 0.04) * blk;
+        float sh = 0.0, fo = 0.0;
+        for (int i = 0; i < 4; i++) {
+          vec2 d = p - uR[i].xy; float c = cos(uA[i]), s = sin(uA[i]);
+          d = vec2(c * d.x - s * d.y, s * d.x + c * d.y);
+          float dist = sdb(d, uR[i].zw);
+          dist += (vn2(d * 0.9 + uStep * 2.3) - 0.5) * 0.5 * uBoil;
+          sh = max(sh, 1.0 - smoothstep(0.0, 3.6, dist));
+          float ang = atan(d.y, d.x);
+          float r1 = 1.0 - smoothstep(0.0, 0.32, abs(dist - 0.45));
+          fo = max(fo, r1 * step(0.4, vn2(vec2(ang * 7.0 + float(i) * 5.0, uTime * 1.4))));
+          float r2 = 1.0 - smoothstep(0.0, 0.2, abs(dist - 1.9));
+          fo = max(fo, 0.45 * r2 * step(0.55, vn2(vec2(ang * 10.0 + float(i) * 3.0, -uTime))));
+        }
+        col = mix(col, uShal, sh * 0.72);
+        // drifting swell marks
+        vec2 fp = p - uFlow * uTime;
+        vec2 cs = vec2(7.0, 3.4);
+        vec2 cell = floor(fp / cs), lf = fract(fp / cs);
+        float rnd = h21(cell), off = h21(cell + 3.1);
+        lf.y += (vn2(fp * 0.7 + uStep * 3.0) - 0.5) * 0.08 * uBoil;
+        float arc = lf.y - 0.4 - 0.5 * (lf.x - 0.5) * (lf.x - 0.5);
+        float len = smoothstep(0.12, 0.22, lf.x) * (1.0 - smoothstep(0.5 + off * 0.3, 0.6 + off * 0.3, lf.x));
+        float dash = (1.0 - smoothstep(0.035, 0.07, abs(arc))) * len * step(0.42, rnd);
+        col = mix(col, uFoam, dash * (0.35 + 0.3 * off) * (1.0 - sh));
+        // sun glints, top-left
+        float gl = step(0.975, vn2(p * 1.6 + uStep * 7.0)) * (1.0 - g) * (1.0 - sh);
+        col = mix(col, vec3(1.0, 0.95, 0.8), gl * 0.75);
+        col = mix(col, uFoam, fo * 0.9);
+        col *= 0.95 + 0.1 * step(0.1, vH);
+        float fd = length(vW - cameraPosition);
+        col = mix(col, uFogC, smoothstep(80.0, 165.0, fd));
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  })
+);
+scene.add(water);
+
+// ------------------------------------------------------------------ player boat
+const HULL2D = [[0, -205], [36, -172], [64, -128], [79, -80], [84, 0], [82, 90], [76, 140], [62, 160], [-62, 160], [-76, 140], [-82, 90], [-84, 0], [-79, -80], [-64, -128], [-36, -172]];
+function hullGeo(pts, s, depth) {
+  const sh = new THREE.Shape();
+  pts.forEach(([x, y], i) => (i ? sh.lineTo(x * s, -y * s) : sh.moveTo(x * s, -y * s)));
+  sh.closePath();
+  const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: false });
+  g.rotateX(-Math.PI / 2);
+  return g;
+}
+const plankTex = tex(256, 256, (x, w, h) => {
+  mottle(x, w, h, css(PAL.wood), 'rgba(90,60,30,0.18)', 18, 3);
+  for (let i = 0; i < 8; i++) {
+    const px = i * 32 + 4 + hs(i, 1) * 4;
+    inkLine(x, [[px, 0], [px + 2, h * 0.5], [px, h]], 2.2, '#8e6a40', 0.8);
+    for (let k = 0; k < 2; k++) { const ky = hs(i, k, 2) * h; inkLine(x, [[px + 3, ky], [px + 29, ky + 1]], 1.6, '#8e6a40', 0.55); }
+  }
+}, [0.11, 0.11]);
+const DECK = 1.4, C = 4, GX = -6, GZ = -11;
+const boat = new THREE.Group();
+scene.add(boat);
+boat.rotation.order = 'YXZ';
+part(boat, hullGeo(HULL2D, 0.1, DECK), [toon(0, plankTex), toon(PAL.wood)], 0, 0, 0, { outline: 'thick' });
+// rusted scrap patches on the bow and stern
+part(boat, box(4.2, 0.12, 3), toon(PAL.rust), -0.4, DECK + 0.06, -14.8, { ry: 0.25 });
+part(boat, box(3.2, 0.12, 2.8), toon(PAL.steel), -6.1, DECK + 0.06, 13.8, { ry: -0.1 });
+// tyre fenders
+[[-1, -4], [-1, 4], [-1, 11.2], [1, -4], [1, 4], [1, 11.2]].forEach(([sg, z]) => {
+  part(boat, new THREE.TorusGeometry(0.85, 0.36, 8, 16), toon(0x2b2a27), sg * (z > 10 ? 8.0 : 8.6), 0.8, z, { ry: Math.PI / 2 });
+});
+// deck grid (the backpack)
+{
+  const v = [];
+  for (let i = 0; i <= 3; i++) v.push(GX + i * C, DECK + 0.03, GZ, GX + i * C, DECK + 0.03, GZ + 6 * C);
+  for (let j = 0; j <= 6; j++) v.push(GX, DECK + 0.03, GZ + j * C, GX + 3 * C, DECK + 0.03, GZ + j * C);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+  boat.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xf0e4c8, transparent: true, opacity: 0.45 })));
+}
+const cellPos = (c, r, w, h) => [GX + (c + w / 2) * C, GZ + (r + h / 2) * C];
+const ANIM = { props: [], fire: [], cellLight: null };
+// 1 bow cannon (1x1) — fires forward only
+{
+  const [x, z] = cellPos(1, 0, 1, 1);
+  for (let i = 0; i < 7; i++) { const a = Math.PI * 0.2 + i * Math.PI * 0.27; part(boat, new THREE.IcosahedronGeometry(0.55, 0), toon(PAL.sand), x + Math.cos(a) * 1.5, DECK + 0.35, z + Math.sin(a) * 1.5, { outline: false }); }
+  part(boat, cyl(1.1, 0.8), toon(PAL.steel), x, DECK + 0.4, z);
+  part(boat, cyl(0.34, 3.4, 10), toon(PAL.steelD), x, DECK + 0.95, z - 2.0, { rx: Math.PI / 2 });
+  part(boat, cyl(0.5, 0.6, 10), toon(PAL.dark), x, DECK + 0.95, z - 3.8, { rx: Math.PI / 2 });
+}
+// 2 port machine gun (1x2) — barrel sticks out to the left
+{
+  const [x, z] = cellPos(0, 1, 1, 2);
+  part(boat, box(2.8, 0.3, 6.2), toon(PAL.rust), x, DECK + 0.15, z);
+  part(boat, cyl(0.85, 0.9), toon(PAL.steel), x, DECK + 0.75, z);
+  part(boat, cyl(0.3, 4.4, 10), toon(PAL.steelD), x - 2.4, DECK + 1.0, z, { rz: Math.PI / 2 });
+  for (let i = 0; i < 3; i++) part(boat, box(0.55, 0.6, 0.9), toon(0x6b6a3f), x - 0.65 + i * 0.65, DECK + 0.6, z + 2.2);
+}
+// 3 starboard armour (1x2)
+{
+  const [x, z] = cellPos(2, 1, 1, 2);
+  part(boat, box(3.2, 1.3, 7.4), toon(PAL.steel), x, DECK + 0.65, z, { outline: 'mid' });
+  for (let j = 0; j < 4; j++) [-1, 1].forEach((s) => part(boat, new THREE.SphereGeometry(0.16, 6, 4), toon(PAL.dark), x + s * 1.1, DECK + 1.32, z - 2.8 + j * 1.85, { outline: false }));
+}
+// 4 parts crate (2x1)
+{
+  const [x, z] = cellPos(0, 3, 2, 1);
+  const top = tex(256, 128, (c, w, h) => {
+    mottle(c, w, h, css(PAL.woodL), 'rgba(120,80,40,0.2)', 8, 9);
+    for (let i = 1; i < 3; i++) inkLine(c, [[6, i * h / 3], [w - 6, i * h / 3 + 2]], 3, '#8e6a40', 0.8);
+    c.fillStyle = css(PAL.ink); c.globalAlpha = 0.8; c.font = `64px ${FD}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('零件', w / 2, h / 2 + 4);
+  });
+  const side = toon(PAL.woodL);
+  part(boat, box(7.0, 1.7, 3.0), [side, side, toon(0, top), side, side, side], x, DECK + 0.85, z, { outline: 'mid' });
+}
+// 5 old-world battery (1x1) — rare loot, glows signal yellow
+{
+  const [x, z] = cellPos(2, 3, 1, 1);
+  part(boat, box(2.2, 1.6, 2.6), toon(0x2c3236), x, DECK + 0.8, z);
+  part(boat, box(2.3, 0.4, 2.7), new THREE.MeshBasicMaterial({ color: PAL.sig }), x, DECK + 1.05, z, { outline: false });
+  part(boat, box(0.7, 0.4, 0.5), toon(PAL.steel), x, DECK + 1.8, z - 0.7);
+  const L = new THREE.PointLight(PAL.sig, 1.4, 9, 2); L.position.set(x, DECK + 2.6, z); boat.add(L); ANIM.cellLight = L;
+}
+// 6 fuel drum
+{ const [x, z] = cellPos(0, 4, 1, 1); part(boat, cyl(1.45, 2.2, 16), toon(0xa8402a), x, DECK + 1.1, z, { outline: 'mid' }); part(boat, cyl(0.3, 0.2, 8), toon(PAL.steel), x + 0.6, DECK + 2.3, z - 0.5); }
+// 7 safe box — survives sinking
+{
+  const [x, z] = cellPos(1, 4, 1, 1);
+  const stripes = tex(128, 128, (c, w, h) => {
+    c.fillStyle = css(PAL.sig); c.fillRect(0, 0, w, h);
+    c.strokeStyle = css(PAL.ink); c.lineWidth = 13;
+    for (let i = -4; i < 8; i++) { c.beginPath(); c.moveTo(i * 26, h + 8); c.lineTo(i * 26 + h + 16, -8); c.stroke(); }
+  });
+  const sm = toon(0, stripes);
+  part(boat, box(3.0, 1.8, 3.0), [sm, sm, toon(0x7f9298), sm, sm, sm], x, DECK + 0.9, z, { outline: 'mid' });
+  part(boat, cyl(0.6, 0.2, 12), toon(PAL.bone), x, DECK + 1.9, z);
+}
+// 8 fresh-water jug
+{ const [x, z] = cellPos(2, 4, 1, 1); part(boat, new THREE.CylinderGeometry(1.05, 1.25, 2.4, 12, 2), toon(PAL.water), x, DECK + 1.2, z); part(boat, cyl(0.4, 0.5, 8), toon(0x3f6f84), x, DECK + 2.6, z); }
+// 9 outboard engine (3x1) + propellers
+{
+  const [x, z] = cellPos(0, 5, 3, 1);
+  part(boat, box(10.2, 2.0, 3.0), toon(PAL.dark), x, DECK + 1.0, z, { outline: 'mid' });
+  for (let i = 0; i < 6; i++) part(boat, box(0.25, 0.1, 2.2), toon(0x6f6b60), x - 3.6 + i * 0.75, DECK + 2.05, z, { outline: false });
+  part(boat, box(2.4, 0.3, 1.5), toon(PAL.rust), x + 3.0, DECK + 2.1, z);
+  [-2.4, 2.4].forEach((px) => {
+    part(boat, cyl(0.28, 4.2, 8), toon(PAL.steelD), x + px, 0.3, z + 2.6, { rx: Math.PI / 2 - 0.25 });
+    const prop = new THREE.Group(); prop.position.set(x + px, -0.2, z + 4.8); boat.add(prop);
+    for (let b = 0; b < 3; b++) { const bl = part(prop, box(0.5, 2.0, 0.15), toon(PAL.steel), 0, 0, 0); bl.position.set(Math.cos(b * 2.094) * 0.9, Math.sin(b * 2.094) * 0.9, 0); bl.rotation.z = b * 2.094 + Math.PI / 2; }
+    ANIM.props.push(prop);
+  });
+}
+// shadow blob under the boat
+const blob = new THREE.Mesh(new THREE.CircleGeometry(1, 24), new THREE.MeshBasicMaterial({ color: 0x04161c, transparent: true, opacity: 0.35, depthWrite: false }));
+blob.rotation.x = -Math.PI / 2; blob.scale.set(10, 21, 1); scene.add(blob);
+
+// ------------------------------------------------------------------ enemy harpoon skiff
+const EHULL2D = [[0, -190], [40, -140], [62, -60], [64, 40], [56, 120], [-56, 120], [-64, 40], [-62, -60], [-40, -140]];
+const ES = 0.065;
+const enemy = new THREE.Group(); enemy.rotation.order = 'YXZ'; scene.add(enemy);
+const ENEMY_POS = new THREE.Vector3(33.5, 0, -9);
+const EYAW = -Math.atan2(BOAT.x - ENEMY_POS.x, -(BOAT.z - ENEMY_POS.z));
+part(enemy, hullGeo(EHULL2D, ES, 1.2), [toon(PAL.tar), toon(PAL.red)], 0, 0, 0, { outline: 'thick' });
+for (let i = 0; i < 5; i++) {
+  const z = (-120 + i * 50) * ES;
+  [-1, 1].forEach((s) => part(enemy, new THREE.ConeGeometry(0.28, 1.6, 6), toon(PAL.steelD), s * 4.5, 0.8, z, { rz: -s * Math.PI / 2 }));
+}
+part(enemy, cyl(1.1, 0.8), toon(PAL.steelD), 0, 1.6, -112 * ES);
+part(enemy, cyl(0.24, 7.5, 8), toon(PAL.steel), 0, 2.0, -11.0, { rx: Math.PI / 2 });
+part(enemy, new THREE.ConeGeometry(0.6, 1.6, 6), toon(PAL.bone), 0, 2.0, -15.4, { rx: -Math.PI / 2 });
+part(enemy, new THREE.TorusGeometry(0.9, 0.3, 6, 14), toon(PAL.bone), 0, 1.5, -60 * ES, { rx: Math.PI / 2 });
+part(enemy, box(2.4, 1.4, 2.2), toon(0x6a4a30), -1.6, 1.9, 0);
+part(enemy, box(2.4, 1.4, 2.2), toon(0x6a4a30), 1.6, 1.9, 1.6);
+part(enemy, box(4.4, 1.6, 2.2), toon(PAL.dark), 0, 2.0, 5.7);
+part(enemy, cyl(0.08, 3.2, 6), toon(PAL.dark), -3.2, 2.8, -3.5, { outline: false });
+{
+  const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, -1.2, 0, 2.0, -0.6, 0], 3)); fg.computeVertexNormals();
+  const flag = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ color: PAL.red, side: THREE.DoubleSide })); flag.position.set(-3.2, 4.4, -3.5); enemy.add(flag); ANIM.flag = flag;
+}
+// aim telegraph: red wedge + dashed edges toward the player
+const tele = new THREE.Group(); scene.add(tele);
+{
+  const L = 33, sp = 0.09;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, -Math.sin(sp) * L, 0, -Math.cos(sp) * L, Math.sin(sp) * L, 0, -Math.cos(sp) * L], 3));
+  const wedge = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ color: PAL.red, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false }));
+  tele.add(wedge); ANIM.wedge = wedge;
+  [-1, 1].forEach((s) => {
+    const lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(s * Math.sin(sp) * L, 0, -Math.cos(sp) * L)]);
+    const line = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: PAL.red, dashSize: 1.2, gapSize: 0.8 }));
+    line.computeLineDistances(); tele.add(line);
+  });
+  const warn = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(128, 128, (c) => {
+    c.fillStyle = css(PAL.red); c.strokeStyle = css(PAL.ink); c.lineWidth = 8;
+    c.beginPath(); c.arc(64, 64, 52, 0, Math.PI * 2); c.fill(); c.stroke();
+    c.fillStyle = css(PAL.bone); c.font = `bold 84px ${FD}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('!', 64, 70);
+  }) }));
+  warn.scale.set(3.2, 3.2, 1); warn.position.set(ENEMY_POS.x + 4, 7.5, ENEMY_POS.z - 3); scene.add(warn); ANIM.warn = warn;
+}
+
+// ------------------------------------------------------------------ the drowned city
+const concTex = tex(256, 256, (x, w, h) => mottle(x, w, h, css(PAL.conc), 'rgba(70,64,55,0.28)', 14, 21));
+for (const [ri, R] of ROOFS.entries()) {
+  const g = new THREE.Group(); g.position.set(R.x, 0, R.z); g.rotation.y = R.rot; scene.add(g);
+  const hw = R.w / 2, hd = R.d / 2, T = R.top;
+  let topMat = toon(0, concTex);
+  if (R.type === 'pad') {
+    topMat = toon(0, tex(256, 256, (x, w, h) => {
+      mottle(x, w, h, css(PAL.conc), 'rgba(70,64,55,0.28)', 12, 33);
+      x.globalAlpha = 0.75; x.strokeStyle = '#e1d29a'; x.lineWidth = 12;
+      x.beginPath(); x.arc(w / 2 + 6, h / 2 - 6, 82, 0, Math.PI * 2); x.stroke();
+      x.lineWidth = 16; x.beginPath(); x.moveTo(w / 2 - 22, h / 2 - 46); x.lineTo(w / 2 - 22, h / 2 + 34); x.moveTo(w / 2 + 30, h / 2 - 46); x.lineTo(w / 2 + 30, h / 2 + 34); x.moveTo(w / 2 - 22, h / 2 - 6); x.lineTo(w / 2 + 30, h / 2 - 6); x.stroke();
+    }));
+  }
+  const sideM = toon(PAL.concD);
+  part(g, box(R.w, T + 6, R.d), [sideM, sideM, topMat, sideM, sideM, sideM], 0, (T - 6) / 2, 0, { outline: 'thick' });
+  [[0, -hd + 0.25, R.w, 0.5], [0, hd - 0.25, R.w, 0.5]].forEach(([px, pz, w, d]) => part(g, box(w, 0.5, d), toon(PAL.conc), px, T + 0.25, pz, { outline: false }));
+  [[-hw + 0.25, 0, 0.5, R.d], [hw - 0.25, 0, 0.5, R.d]].forEach(([px, pz, w, d]) => part(g, box(w, 0.5, d), toon(PAL.conc), px, T + 0.25, pz, { outline: false }));
+  if (R.type === 'tank') {
+    part(g, cyl(2.4, 2.8, 18), toon(PAL.rust), hw - 4.4, T + 1.4, -hd + 4.2, { outline: 'mid' });
+    part(g, cyl(0.6, 0.3, 10), toon(PAL.steel), hw - 4.8, T + 2.95, -hd + 3.7);
+    for (let i = 0; i < 3; i++) {
+      part(g, box(3.4, 1.4, 2.6), toon(PAL.steel), -hw + 5.1 + i * 4.6, T + 0.7, hd - 2.5);
+      part(g, cyl(0.85, 0.2, 12), toon(PAL.steelD), -hw + 5.1 + i * 4.6, T + 1.5, hd - 2.5, { outline: false });
+    }
+    for (let i = 0; i < 9; i++) {
+      const r = 0.6 + hs(ri, i, 8) * 0.7;
+      part(g, new THREE.IcosahedronGeometry(r, 0), toon(i % 3 ? PAL.plant : PAL.plant2), -hw + 1.6 + hs(ri, i, 7) * 2.2, T + r * 0.7, -hd + 2.2 + i * 1.3, { outline: 'thin' });
+    }
+    for (let i = 0; i < 9; i++) if (i !== 3 && i !== 6) part(g, cyl(0.1, 1.2, 5), toon(PAL.dark), -hw + 1.5 + i * 2.6, T + 0.8, -hd + 0.25, { outline: false });
+  } else if (R.type === 'pad') {
+    const tent = part(g, new THREE.ConeGeometry(3.2, 2.6, 4), toon(0xd9c9a0), -hw + 4.5, T + 1.3, hd - 4.6, { ry: Math.PI / 4, outline: 'mid' });
+    tent.scale.set(1, 1, 0.75);
+    part(g, cyl(0.9, 0.25, 10), toon(0x3c332b), -hw + 9.6, T + 0.15, hd - 3.2);
+    for (let i = 0; i < 3; i++) {
+      const f = part(g, new THREE.ConeGeometry(0.32, 1.1, 5), new THREE.MeshBasicMaterial({ color: i === 1 ? PAL.sig : PAL.rust }), -hw + 9.3 + i * 0.35, T + 0.8, hd - 3.2 + (i - 1) * 0.25, { outline: false });
+      ANIM.fire.push(f);
+    }
+    part(g, box(3, 2.2, 2.4), toon(PAL.woodL), hw - 3.5, T + 1.1, hd - 3.2);
+    part(g, box(2.4, 2.0, 2.2), toon(PAL.wood), hw - 3.4, T + 1.0, hd - 6.2);
+  } else {
+    part(g, box(4.0, 2.6, 5.4), toon(PAL.concD), -hw + 3.4, T + 1.3, -hd + 4.1, { outline: 'mid' });
+    part(g, box(2.2, 1.8, 0.2), toon(PAL.rustD), -hw + 3.4, T + 1.0, -hd + 6.9);
+    part(g, box(3.6, 0.2, 4.6), toon(0x2f4a5a), 2.2, T + 0.8, 0.5, { rx: -0.35 });
+    part(g, cyl(0.1, 6, 6), toon(PAL.dark), -hw + 3.4, T + 5.6, -hd + 3.0, { outline: false });
+    part(g, box(2.4, 0.12, 0.12), toon(PAL.dark), -hw + 3.4, T + 7.4, -hd + 3.0, { outline: false });
+  }
+}
+// half-sunk billboard
+{
+  const g = new THREE.Group(); g.position.set(BILL.x, 0, BILL.z); g.rotation.y = BILL.rot; scene.add(g);
+  const face = tex(512, 150, (x, w, h) => {
+    mottle(x, w, h, css(PAL.bone), 'rgba(120,100,60,0.25)', 10, 41);
+    x.strokeStyle = css(PAL.ink); x.globalAlpha = 0.6; x.lineWidth = 3; x.strokeRect(14, 12, w - 28, h - 24); x.globalAlpha = 1;
+    x.fillStyle = css(PAL.rustD); x.font = `72px ${FD}`; x.textBaseline = 'alphabetic'; x.fillText('海景房', 34, 84);
+    x.fillStyle = css(PAL.ink); x.globalAlpha = 0.8; x.font = `30px ${FD}`; x.fillText('首付三成 · 临海现房', 36, 124);
+  });
+  const b = toon(PAL.bone);
+  part(g, box(21.6, 6.2, 0.4), [b, b, b, b, toon(0, face), b], 0, 1.0, 0, { rx: -1.15, outline: 'mid' });
+  part(g, cyl(0.4, 6, 8), toon(PAL.steelD), -7, 0, 1.6, { rx: -0.6 });
+  part(g, cyl(0.4, 6, 8), toon(PAL.steelD), 6.6, 0, 1.6, { rx: -0.6 });
+}
+// floating debris + the salvage point
+const drum = new THREE.Group(); drum.position.set(17.2, 0, 16.8); scene.add(drum);
+part(drum, cyl(1.3, 2.4, 14), toon(0xa8402a), 0, 0, 0, { rz: Math.PI / 2, ry: 0.6, outline: 'mid' });
+const tyre = new THREE.Group(); tyre.position.set(-20.8, 0, 4); scene.add(tyre);
+part(tyre, new THREE.TorusGeometry(1.2, 0.5, 8, 18), toon(0x2b2a27), 0, 0, 0, { rx: Math.PI / 2, outline: 'mid' });
+const salvage = new THREE.Group(); salvage.position.set(23.6, 0, 8.6); scene.add(salvage);
+part(salvage, box(2.8, 1.6, 2.2), toon(PAL.woodL), 0, 0.2, 0, { ry: 0.4, outline: 'mid' });
+const ring = new THREE.Mesh(new THREE.TorusGeometry(3.6, 0.13, 6, 40, Math.PI * 2), new THREE.MeshBasicMaterial({ color: PAL.sig }));
+ring.rotation.x = Math.PI / 2; ring.position.y = 0.4; salvage.add(ring);
+const spark = part(salvage, new THREE.OctahedronGeometry(0.7, 0), new THREE.MeshBasicMaterial({ color: PAL.sig }), 0, 3.2, 0, { outline: 'thin' });
+// gulls
+const gulls = [0, 1].map((i) => {
+  const g = new THREE.Group(); scene.add(g);
+  const wm = new THREE.MeshBasicMaterial({ color: PAL.foam, side: THREE.DoubleSide });
+  const mk = (s) => { const w = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.45), wm); w.geometry.translate(s * 0.9, 0, 0); g.add(w); return w; };
+  g.userData = { L: mk(-1), R: mk(1), i };
+  g.scale.setScalar(i ? 0.8 : 1);
+  return g;
+});
+// wake: stateless foam flecks, each a pure function of time
+const wake = new THREE.Group(); scene.add(wake);
+const WN = 46;
+const wakeBits = Array.from({ length: WN }, (_, i) => {
+  const m = new THREE.Mesh(new THREE.CircleGeometry(1, 7), new THREE.MeshBasicMaterial({ color: PAL.foam, transparent: true, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; wake.add(m); return m;
+});
+
+// ------------------------------------------------------------------ camera
+const VIEWS = { tilt: { phi: 0.78, dist: 96, ty: 0 }, top: { phi: 0.02, dist: 104, ty: 0 }, low: { phi: 1.18, dist: 52, ty: 2 } };
+const cam = { theta: 0, phi: VIEWS.tilt.phi, dist: VIEWS.tilt.dist, ty: 0, goal: VIEWS.tilt, drag: 0, lastDrag: -1e9 };
+let dragX = null;
+canvas.addEventListener('pointerdown', (e) => { dragX = e.clientX; cam.lastDrag = performance.now(); });
+window.addEventListener('pointermove', (e) => { if (dragX === null) return; cam.drag += (e.clientX - dragX) * 0.006; dragX = e.clientX; cam.lastDrag = performance.now(); });
+window.addEventListener('pointerup', () => { dragX = null; });
+window.addEventListener('pointercancel', () => { dragX = null; });
+
+const state = { rate: 2, boil: 1 };
+function group(sel, attr, apply) {
+  document.querySelectorAll(sel).forEach((b) => b.addEventListener('click', () => {
+    document.querySelectorAll(sel).forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+    apply(b.dataset[attr]);
+  }));
+}
+group('[data-view]', 'view', (v) => { cam.goal = VIEWS[v]; });
+group('[data-rate]', 'rate', (v) => { state.rate = Number(v); });
+group('[data-boil]', 'boil', (v) => { state.boil = Number(v); });
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.fov = w / h < 1 ? 52 : 38;
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage);
+resize();
+
+// ------------------------------------------------------------------ frame
+const TARGET = new THREE.Vector3(2, 0, 0);
+let visible = true;
+document.addEventListener('visibilitychange', () => { visible = !document.hidden; });
+function frame(now) {
+  requestAnimationFrame(frame);
+  if (!visible) return;
+  const real = REDUCE ? 0 : now / 1000;
+  const drawing = Math.floor(real * 12);
+  const T = state.rate === 2 ? drawing / 12 : real;
+  U.uStep.value = state.boil ? drawing % 3 : 0;
+  U.uBoil.value = state.boil;
+  water.material.uniforms.uTime.value = T;
+
+  // boat bob on the swell
+  const bx = BOAT.x, bz = BOAT.z;
+  boat.position.set(bx, waveH(bx, bz, T) * 0.7 - 0.55, bz);
+  boat.rotation.set((waveH(bx, bz + 8, T) - waveH(bx, bz - 8, T)) * 0.05, BOAT.yaw, (waveH(bx - 4, bz, T) - waveH(bx + 4, bz, T)) * 0.08);
+  blob.position.set(bx + 0.8, 0.02 + waveH(bx, bz, T), bz + 1);
+  blob.rotation.z = BOAT.yaw;
+  ANIM.props.forEach((p, i) => { p.rotation.z = T * 14 * (i ? -1 : 1); });
+  if (ANIM.cellLight) ANIM.cellLight.intensity = 1.2 + 0.4 * Math.sin(T * 5);
+
+  enemy.position.set(ENEMY_POS.x, waveH(ENEMY_POS.x, ENEMY_POS.z, T) * 0.8 - 0.45, ENEMY_POS.z);
+  enemy.rotation.set(0.03 * Math.sin(T * 1.7), EYAW, 0.04 * Math.sin(T * 1.3 + 1));
+  ANIM.flag.rotation.y = 0.3 * Math.sin(T * 6);
+  const fwdE = new THREE.Vector3(-Math.sin(EYAW), 0, -Math.cos(EYAW));
+  tele.position.copy(ENEMY_POS).addScaledVector(fwdE, 11).setY(0.5);
+  tele.rotation.y = EYAW;
+  ANIM.wedge.material.opacity = 0.18 + 0.14 * (0.5 + 0.5 * Math.sin(T * 6));
+  ANIM.warn.position.y = 7.5 + 0.3 * Math.sin(T * 4);
+
+  ANIM.fire.forEach((f, i) => f.scale.set(1, 0.7 + 0.5 * hs(drawing, i), 1));
+  drum.position.y = waveH(17.2, 16.8, T) * 0.9 - 0.2; drum.rotation.z = 0.15 * Math.sin(T * 1.4);
+  tyre.position.y = waveH(-20.8, 4, T) * 0.9; tyre.rotation.z = 0.1 * Math.sin(T * 1.2 + 2);
+  salvage.position.y = waveH(23.6, 8.6, T) * 0.9 - 0.3;
+  ring.rotation.z = T * 0.6;
+  spark.rotation.y = T * 2; spark.position.y = 3.2 + 0.3 * Math.sin(T * 3);
+  spark.scale.setScalar(0.8 + 0.3 * Math.abs(Math.sin(T * 4)));
+
+  gulls.forEach((g) => {
+    const i = g.userData.i, a = T * 0.18 + i * 0.6;
+    g.position.set(-14 + Math.cos(a) * 26, 13 + i * 2 + Math.sin(T * 0.9 + i), -14 + Math.sin(a) * 16);
+    g.rotation.y = -a;
+    const fl = Math.sin(T * 7 + i * 2) * 0.5;
+    g.userData.L.rotation.z = fl; g.userData.R.rotation.z = -fl;
+  });
+
+  // wake: two arms + churn behind the stern, drifting with the current
+  const side = new THREE.Vector2(-FWD.y, FWD.x);
+  const stern = new THREE.Vector2(bx, bz).addScaledVector(FWD, -16);
+  wakeBits.forEach((m, i) => {
+    const arm = i % 3, s = ((T / 3.2) + hs(i, 4)) % 1;
+    const lat = arm === 2 ? (hs(i, 5) - 0.5) * 3 * (0.4 + s) : (arm ? 1 : -1) * (4.5 + s * 12);
+    const p = stern.clone().addScaledVector(FWD, -s * 30).addScaledVector(side, lat);
+    m.position.set(p.x, waveH(p.x, p.y, T) + 0.08, p.y);
+    const sc = (arm === 2 ? 1.1 : 0.7) * (0.6 + s * 1.4);
+    m.scale.set(sc * 1.6, sc, 1);
+    m.rotation.z = BOAT.yaw + (hs(i, 6) - 0.5);
+    m.material.opacity = (1 - s) * (arm === 2 ? 0.75 : 0.6);
+  });
+
+  // camera
+  const idle = (now - cam.lastDrag) > 4000;
+  const sway = REDUCE ? 0 : 0.12 * Math.sin(real * 0.12);
+  const kk = 0.06;
+  cam.phi += (cam.goal.phi - cam.phi) * kk;
+  cam.dist += (cam.goal.dist - cam.dist) * kk;
+  cam.ty += (cam.goal.ty - cam.ty) * kk;
+  if (idle) cam.drag *= 0.995;
+  cam.theta = cam.drag + sway;
+  const tgt = TARGET.clone(); tgt.y = cam.ty;
+  camera.position.set(
+    tgt.x + Math.sin(cam.theta) * Math.sin(cam.phi) * cam.dist,
+    tgt.y + Math.cos(cam.phi) * cam.dist,
+    tgt.z + Math.cos(cam.theta) * Math.sin(cam.phi) * cam.dist
+  );
+  camera.up.set(cam.phi < 0.1 ? -Math.sin(cam.theta) : 0, cam.phi < 0.1 ? 0 : 1, cam.phi < 0.1 ? -Math.cos(cam.theta) : 0);
+  camera.lookAt(tgt);
+  renderer.render(scene, camera);
+}
+const fonts = document.fonts ? Promise.race([document.fonts.load(`64px ${FD}`, '零件海景房首付三成临海现!'), new Promise((r) => setTimeout(r, 2500))]) : Promise.resolve();
+fonts.catch(() => {}).then(() => { TEXS.forEach((f) => f()); requestAnimationFrame(frame); });
+})();
+</script>
