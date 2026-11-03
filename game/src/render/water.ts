@@ -107,9 +107,9 @@ export function createWater() {
         col = mix(col, col * 0.55 + 0.035 * vec3(sin(ph), sin(ph + 2.1), sin(ph + 4.2)) + 0.02, oil * 0.8);
         col = mix(col, vec3(1.0, 0.94, 0.8), sp * 0.6 * (1.0 - oil));
         vec2 fp = p - uFlow * uTime * 0.4;
-        float cap = smoothstep(0.76, 0.86, hn) * smoothstep(0.42, 0.62, 0.6 * vn2(fp * 0.35) + 0.4 * vn2(fp * 0.9 + 4.0));
+        float cap = smoothstep(0.84, 0.92, hn) * smoothstep(0.55, 0.7, 0.6 * vn2(fp * 0.45) + 0.4 * vn2(fp * 1.1 + 4.0));
         float streak = smoothstep(0.7, 0.76, vn2(vec2(dot(fp, vec2(0.94, -0.33)) * 0.1, dot(fp, vec2(0.33, 0.94)) * 0.7))) * 0.2;
-        col = mix(col, uFoam, max(cap * 0.8, streak) * (1.0 - oil) * (1.0 - sh * 0.7));
+        col = mix(col, uFoam, max(cap * 0.6, streak * 0.7) * (1.0 - oil) * (1.0 - sh * 0.7));
         vec2 bd = p - uBoat; float al = dot(bd, uFwd); float la = dot(bd, vec2(-uFwd.y, uFwd.x));
         float a = -al - 15.5, wake = 0.0;
         if (a > -1.0) {

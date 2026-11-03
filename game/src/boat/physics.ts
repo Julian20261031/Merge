@@ -14,7 +14,7 @@ export const TUNING = {
   maxSpeed: 15,
   accel: 7,
   drag: 0.55,          // proportional slow-down per second
-  brake: 2.2,          // flat slow-down per second when not throttling
+  brake: 4.0,          // flat slow-down per second when not throttling
   turnRate: 1.35,      // rad/s
   weightSlow: 0.022,   // max speed lost per unit of cargo weight
   minSpeedFactor: 0.5,

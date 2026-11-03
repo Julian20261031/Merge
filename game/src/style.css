@@ -62,7 +62,7 @@ body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none
 .marker.dock span { color: var(--safe-green); font-family: var(--f-display); font-size: 15px; }
 
 /* the hold */
-.panel-wrap { position: absolute; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center; background: rgba(8, 16, 16, .45); padding: calc(10px + var(--sat)) calc(10px + var(--sar)) calc(10px + var(--sab)) calc(10px + var(--sal)); }
+.panel-wrap { position: absolute; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center; background: rgba(8, 16, 16, .45); padding: calc(64px + var(--sat)) calc(10px + var(--sar)) calc(10px + var(--sab)) calc(10px + var(--sal)); }
 .panel-wrap.open { display: flex; }
 .panel { background: #2a2a24; border: 3px solid var(--ink); border-radius: 6px; box-shadow: 0 10px 40px rgba(0, 0, 0, .55), inset 0 0 0 2px rgba(228, 216, 188, .12); max-width: 100%; max-height: 100%; overflow: auto; color: var(--bone); }
 .panel-head { display: flex; align-items: baseline; gap: 14px; padding: 10px 16px; border-bottom: 2px solid rgba(228, 216, 188, .15); font-family: var(--f-display); flex-wrap: wrap; }
