@@ -4,16 +4,16 @@ import { TX, concTop, concSide } from '../render/textures';
 import { toon, part, box, cyl, dent } from '../render/toon';
 import { mulberry32, hs } from '../core/noise';
 import { Calm, waveH } from '../render/water';
+import { MapDef } from './maps';
 
 export interface Roof { x: number; z: number; w: number; d: number; rot: number; top: number; type: 'tank' | 'shack' | 'stair' | 'garden' }
 export interface Spot { x: number; z: number; richness: number; looted: boolean; progress: number; group: THREE.Group; ring: THREE.Mesh; spark: THREE.Mesh; sink: number }
 export interface Dock { x: number; z: number; r: number; pier: Roof }
 
-export const MAP_RADIUS = 175;
 let ROOF_TEX: { tops: THREE.Texture[]; sides: THREE.Texture[] } | null = null;
 
 export interface World {
-  roofs: Roof[]; spots: Spot[]; dock: Dock; calm: Calm[];
+  roofs: Roof[]; spots: Spot[]; dock: Dock; calm: Calm[]; radius: number;
   dockRing: THREE.Mesh;
   update(t: number, dt: number): void;
 }
@@ -104,28 +104,29 @@ function buildSpot(scene: THREE.Object3D, sp: { x: number; z: number; richness: 
   return { x: sp.x, z: sp.z, richness: sp.richness, looted: false, progress: 0, group: g, ring, spark, sink: 0 };
 }
 
-export function buildWorld(scene: THREE.Object3D, seed: number): World {
+export function buildWorld(scene: THREE.Object3D, seed: number, map: MapDef): World {
+  const R0 = map.radius;
   const rand = mulberry32(seed);
   const pier: Roof = { x: 0, z: 0, w: 22, d: 7, rot: 0, top: 1.6, type: 'garden' };
   const dock: Dock = { x: 0, z: -14, r: 14, pier };
 
   const roofs: Roof[] = [];
   const types: Roof['type'][] = ['tank', 'shack', 'stair', 'garden'];
-  for (let tries = 0; roofs.length < 16 && tries < 800; tries++) {
-    const a = rand() * Math.PI * 2, r = 45 + rand() * 120;
+  for (let tries = 0; roofs.length < map.roofs && tries < 800; tries++) {
+    const a = rand() * Math.PI * 2, r = 45 + rand() * (R0 - 55);
     const x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (roofs.some((o) => Math.hypot(o.x - x, o.z - z) < 40)) continue;
     if (Math.hypot(x, z + 10) < 50) continue;
     roofs.push({ x, z, w: 12 + rand() * 12, d: 10 + rand() * 10, rot: (rand() - 0.5) * 1.2, top: 1.7 + rand() * 1.6, type: types[Math.floor(rand() * 4)] });
   }
   const spots: { x: number; z: number; richness: number }[] = [];
-  for (let tries = 0; spots.length < 13 && tries < 1500; tries++) {
-    const a = rand() * Math.PI * 2, r = 40 + rand() * 128;
+  for (let tries = 0; spots.length < map.spots && tries < 1500; tries++) {
+    const a = rand() * Math.PI * 2, r = 40 + rand() * (R0 - 47);
     const x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (roofs.some((o) => Math.hypot(o.x - x, o.z - z) < Math.max(o.w, o.d) / 2 + 14)) continue;
     if (spots.some((o) => Math.hypot(o.x - x, o.z - z) < 26)) continue;
     if (Math.hypot(x - dock.x, z - dock.z) < 34) continue;
-    spots.push({ x, z, richness: Math.min(1, r / 168) });
+    spots.push({ x, z, richness: map.rich[0] + (map.rich[1] - map.rich[0]) * Math.min(1, r / (R0 - 7)) });
   }
 
   // shared roof textures (texture generation is the slowest part of loading)
@@ -142,7 +143,7 @@ export function buildWorld(scene: THREE.Object3D, seed: number): World {
 
   // collapsed towers in the haze, all around the edge
   for (let k = 0; k < 16; k++) {
-    const a = (k / 16) * Math.PI * 2 + rand() * 0.3, r = 215 + rand() * 60, w = 8 + rand() * 6, h = 10 + rand() * 30;
+    const a = (k / 16) * Math.PI * 2 + rand() * 0.3, r = R0 + 40 + rand() * 60, w = 8 + rand() * 6, h = 10 + rand() * 30;
     const g = new THREE.Group();
     g.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
     g.rotation.set(0, rand() * 1.2, (rand() - 0.5) * 0.18);
@@ -161,7 +162,7 @@ export function buildWorld(scene: THREE.Object3D, seed: number): World {
   // floating junk
   const junk: { m: THREE.Object3D; x: number; z: number; lift: number }[] = [];
   for (let c = 0; c < 12; c++) {
-    const a = rand() * Math.PI * 2, r = 30 + rand() * 140, cx = Math.cos(a) * r, cz = Math.sin(a) * r;
+    const a = rand() * Math.PI * 2, r = 30 + rand() * (R0 - 35), cx = Math.cos(a) * r, cz = Math.sin(a) * r;
     if (roofs.some((o) => Math.hypot(o.x - cx, o.z - cz) < Math.max(o.w, o.d) / 2 + 8)) continue;
     for (let k = 0; k < 5; k++) {
       const x = cx + (rand() - 0.5) * 9, z = cz + (rand() - 0.5) * 7, tp = Math.floor(rand() * 4);
@@ -177,7 +178,7 @@ export function buildWorld(scene: THREE.Object3D, seed: number): World {
   const calm: Calm[] = [...roofs.map((r) => ({ x: r.x, z: r.z, hx: r.w / 2, hz: r.d / 2, rot: r.rot })), { x: pier.x, z: pier.z, hx: pier.w / 2, hz: pier.d / 2, rot: 0 }];
 
   return {
-    roofs: [...roofs, pier], spots: spotObjs, dock, calm, dockRing,
+    roofs: [...roofs, pier], spots: spotObjs, dock, calm, dockRing, radius: R0,
     update(t: number, dt: number) {
       for (const j of junk) j.m.position.y = waveH(j.x, j.z, t) + j.lift;
       for (const s of spotObjs) {

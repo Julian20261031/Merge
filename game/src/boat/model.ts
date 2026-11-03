@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { TX } from '../render/textures';
 import { toon, part, box, cyl, dent, ringGeo, offsetPoly } from '../render/toon';
 import { hs } from '../core/noise';
-import { DECK_W, DECK_H } from '../inventory/grid';
+import { DECK_W, DECK_H, Layout, Placed, pw, ph, sideOf } from '../inventory/modules';
 
 export const HULL2D = [[0, -205], [36, -172], [64, -128], [79, -80], [84, 0], [82, 90], [76, 140], [62, 160], [-62, 160], [-76, 140], [-82, 90], [-84, 0], [-79, -80], [-64, -128], [-36, -172]];
 export const DECK = 1.4, CELL = 4, GX = -6, GZ = -11;
@@ -22,13 +22,13 @@ function hullGeo(pts: number[][], s: number, depth: number) {
 
 export interface BoatModel {
   group: THREE.Group;
-  cargo: THREE.Group;
+  cargoFill: THREE.Object3D[];      // one per cargo box, in Layout.cargoBoxes() order; scale.y = how full
   props: THREE.Object3D[];
   flag: { m: THREE.Mesh; base: Float32Array; w: number };
   exhaust: THREE.Vector3;
 }
 
-export function buildBoat(): BoatModel {
+export function buildBoat(layout: Layout): BoatModel {
   const g = new THREE.Group();
   g.rotation.order = 'YXZ';
   part(g, hullGeo(HULL2D, 0.1, DECK), [toon(0, TX.deck), toon(0, TX.hull)], 0, 0, 0, { outline: 'thick' });
@@ -57,7 +57,8 @@ export function buildBoat(): BoatModel {
       const a = path[i], b = path[(i + 1) % path.length], n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2.6));
       for (let k = 0; k < n; k++) pts.push([a[0] + (b[0] - a[0]) * (k / n), a[1] + (b[1] - a[1]) * (k / n)]);
     }
-    const gap = ([x, z]: number[]) => z < -18.5 || (z > 15.5 && Math.abs(x) < 3.2) || (x < 0 && z > -5.2 && z < -0.8);
+    const gunPorts = layout.placed.filter((p) => p.type === 'gun' && sideOf(p) !== 0).map((p) => ({ side: sideOf(p), z0: GZ + p.r * CELL - 1.2, z1: GZ + (p.r + ph(p)) * CELL + 1.2 }));
+    const gap = ([x, z]: number[]) => z < -18.5 || (z > 15.5 && Math.abs(x) < 3.2) || gunPorts.some((g) => Math.sign(x) === g.side && z > g.z0 && z < g.z1);
     const railM = toon(0, TX.steel);
     pts.forEach((p, i) => {
       const q = pts[(i + 1) % pts.length];
@@ -92,70 +93,109 @@ export function buildBoat(): BoatModel {
   for (let k = 0; k < 3; k++) part(g, new THREE.TorusGeometry(0.9 - k * 0.08, 0.15, 6, 16), toon(ROPE), -2.3, DECK + 0.15 + k * 0.24, -13.6, { rx: Math.PI / 2, outline: k === 2 ? 'thin' : false });
   part(g, new THREE.TorusGeometry(0.75, 0.24, 6, 14), toon(TYRE), 2.4, DECK + 0.45, -13.4, { rx: 1.2 });
 
-  const at = (c: number, r: number, w: number, h: number) => cellCenter(c, r, w, h);
-  // bow gun on a car wheel rim behind a corrugated shield
-  {
-    const p = at(1, 0, 1, 1);
-    part(g, new THREE.TorusGeometry(1.25, 0.32, 8, 18), toon(TYRE), p.x, DECK + 0.32, p.z, { rx: Math.PI / 2 });
-    part(g, cyl(0.75, 0.7, 10), toon(0, TX.steel), p.x, DECK + 0.45, p.z);
-    part(g, dent(cyl(0.32, 3.8, 10), 0.05), toon(0, TX.dark), p.x, DECK + 1.05, p.z - 2.0, { rx: Math.PI / 2 });
-    part(g, dent(new THREE.CylinderGeometry(1.9, 1.9, 1.5, 14, 2, true, Math.PI - 1.1, 2.2), 0.14), toon(0, TX.corrRust, { side: THREE.DoubleSide }), p.x, DECK + 1.0, p.z, { outline: false });
-  }
-  // port machine gun in a sandbag nest
-  {
-    const p = at(0, 1, 1, 2);
-    part(g, dent(box(2.8, 0.3, 6.0), 0.12), toon(0, TX.primer), p.x, DECK + 0.15, p.z, { ry: 0.04 });
-    [[-1.1, -1.8], [-1.25, -0.6], [-1.25, 0.6], [-1.1, 1.8], [-0.1, 2.35], [0.9, 2.2]].forEach(([dx, dz], i) => {
-      const sb = part(g, new THREE.IcosahedronGeometry(0.62, 1), toon(0, TX.sand), p.x + dx, DECK + 0.5, p.z + dz, { ry: i });
-      sb.scale.set(1, 0.6, 1.3);
-    });
-    part(g, cyl(0.55, 0.7, 10), toon(0, TX.steel), p.x, DECK + 0.6, p.z);
-    part(g, dent(box(1.3, 0.8, 1.6), 0.06), toon(0, TX.dark), p.x, DECK + 1.15, p.z);
-    part(g, cyl(0.2, 4.6, 8), toon(0, TX.dark), p.x - 2.6, DECK + 1.2, p.z, { rz: Math.PI / 2 });
-    part(g, cyl(0.32, 1.0, 8), toon(TYRE), p.x - 1.1, DECK + 1.2, p.z, { rz: Math.PI / 2 });
-  }
-  // starboard armour: a road sign welded to the rail
-  {
-    const p = at(2, 1, 1, 2);
-    part(g, dent(box(1.6, 0.12, 7.2), 0.1), toon(0, TX.corr), p.x - 0.7, DECK + 0.08, p.z, { ry: 0.03, outline: false });
-    for (const k of [-2.6, 0, 2.6]) part(g, box(0.6, 0.5, 0.5), toon(0, TX.steel), p.x + 1.2, DECK + 0.25, p.z + k);
-    const rm = toon(0, TX.corrRust);
-    part(g, dent(box(0.2, 3.4, 7.6), 0.09), [rm, toon(0, TX.sign), rm, rm, rm, rm], p.x + 1.0, DECK + 1.5, p.z, { rz: -0.5, outline: 'mid' });
-  }
-  // fuel drum
-  { const p = at(0, 4, 1, 1); part(g, dent(cyl(1.45, 2.2, 16), 0.18), toon(0, TX.drum), p.x, DECK + 1.1, p.z, { outline: 'mid' }); }
-  // safe box
-  {
-    const p = at(1, 4, 1, 1), sm = toon(0, TX.safeSide);
-    part(g, dent(box(3.0, 1.8, 3.0), 0.05), [sm, sm, toon(0, TX.safeTop), sm, sm, sm], p.x, DECK + 0.9, p.z, { outline: 'mid' });
-    part(g, cyl(0.6, 0.2, 12), toon(0xe0d4b8), p.x - 0.4, DECK + 1.9, p.z);
-  }
-  // car engine block, exhaust stack, two scavenged propellers
   const props: THREE.Object3D[] = [];
+  const cargoFill: THREE.Object3D[] = [];
   let exhaust = new THREE.Vector3();
-  {
-    const p = at(0, 5, 3, 1);
-    part(g, dent(box(7.6, 2.0, 2.8), 0.14), toon(0, TX.dark), p.x - 1, DECK + 1.0, p.z, { outline: 'mid' });
-    part(g, dent(box(5.0, 0.5, 1.4), 0.06), toon(0, TX.primer), p.x - 1, DECK + 2.25, p.z);
-    part(g, cyl(0.9, 0.5, 12), toon(0, TX.steel), p.x + 3.7, DECK + 2.25, p.z);
-    part(g, cyl(0.3, 4.6, 8), toon(0, TX.dark), p.x - 3.6, DECK + 3.0, p.z + 0.9, { rz: 0.06 });
-    part(g, cyl(0.3, 1.4, 8), toon(0, TX.dark), p.x - 3.15, DECK + 5.45, p.z + 0.9, { rz: -1.1, outline: false });
-    exhaust = new THREE.Vector3(p.x - 2.6, DECK + 5.8, p.z + 0.9);
-    for (const px of [-2.4, 2.4]) {
-      part(g, cyl(0.28, 4.2, 8), toon(0, TX.steel), p.x + px, 0.3, p.z + 2.6, { rx: Math.PI / 2 - 0.25 });
-      const prop = new THREE.Group();
-      prop.position.set(p.x + px, -0.2, p.z + 4.8);
-      g.add(prop);
-      for (let b = 0; b < 3; b++) {
-        const bl = part(prop, box(0.5, 2.0, 0.15), toon(0, TX.steel), 0, 0, 0);
-        bl.position.set(Math.cos(b * 2.094) * 0.9, Math.sin(b * 2.094) * 0.9, 0);
-        bl.rotation.z = b * 2.094 + Math.PI / 2;
+  const boxes = layout.cargoBoxes();
+  for (const m of layout.placed) {
+    const res = buildModule(g, m);
+    if (res.props) props.push(...res.props);
+    if (res.exhaust) exhaust = res.exhaust;
+    if (res.fill) cargoFill[boxes.indexOf(m)] = res.fill;
+  }
+  return { group: g, cargoFill, props, flag: { m: flagMesh, base: Float32Array.from(fg.attributes.position.array as Float32Array), w: 3 }, exhaust };
+}
+
+interface ModRes { props?: THREE.Object3D[]; exhaust?: THREE.Vector3; fill?: THREE.Object3D }
+
+/** One deck module at its cells. Side-mounted guns and armour face outward. */
+function buildModule(g: THREE.Group, m: Placed): ModRes {
+  const w = pw(m), h = ph(m), p = cellCenter(m.c, m.r, w, h), side = sideOf(m);
+  const W = w * CELL, D = h * CELL;
+  switch (m.type) {
+    case 'cannon': {
+      part(g, new THREE.TorusGeometry(1.25, 0.32, 8, 18), toon(TYRE), p.x, DECK + 0.32, p.z, { rx: Math.PI / 2 });
+      part(g, cyl(0.75, 0.7, 10), toon(0, TX.steel), p.x, DECK + 0.45, p.z);
+      part(g, dent(cyl(0.32, 3.8, 10), 0.05), toon(0, TX.dark), p.x, DECK + 1.05, p.z - 2.0, { rx: Math.PI / 2 });
+      part(g, dent(new THREE.CylinderGeometry(1.9, 1.9, 1.5, 14, 2, true, Math.PI - 1.1, 2.2), 0.14), toon(0, TX.corrRust, { side: THREE.DoubleSide }), p.x, DECK + 1.0, p.z, { outline: false });
+      return {};
+    }
+    case 'gun': {
+      const len = Math.max(W, D);
+      part(g, dent(box(W - 1.2, 0.3, D - 1.2), 0.12), toon(0, TX.primer), p.x, DECK + 0.15, p.z);
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 4 - 0.5) * 2.4 + (side < 0 ? Math.PI : side > 0 ? 0 : -Math.PI / 2);
+        const sb = part(g, new THREE.IcosahedronGeometry(0.62, 1), toon(0, TX.sand), p.x + Math.cos(a) * 1.4, DECK + 0.5, p.z + Math.sin(a) * Math.min(1.4, len / 3), { ry: i });
+        sb.scale.set(1, 0.6, 1.3);
       }
-      props.push(prop);
+      part(g, cyl(0.55, 0.7, 10), toon(0, TX.steel), p.x, DECK + 0.6, p.z);
+      part(g, dent(box(1.3, 0.8, 1.6), 0.06), toon(0, TX.dark), p.x, DECK + 1.15, p.z);
+      if (side === 0) part(g, cyl(0.2, 4.6, 8), toon(0, TX.dark), p.x, DECK + 1.2, p.z - 2.6, { rx: Math.PI / 2 });
+      else part(g, cyl(0.2, 4.6, 8), toon(0, TX.dark), p.x + side * 2.6, DECK + 1.2, p.z, { rz: Math.PI / 2 });
+      return {};
+    }
+    case 'armor': {
+      const along = D >= W;   // plate runs along the hull
+      part(g, dent(box(along ? 1.6 : W - 0.8, 0.12, along ? D - 0.8 : 1.6), 0.1), toon(0, TX.corr), p.x - side * 0.7, DECK + 0.08, p.z, { outline: false });
+      const rm = toon(0, TX.corrRust);
+      if (side === 0 || !along) {
+        part(g, dent(box(W - 0.6, 0.2, D - 0.6), 0.08), [rm, rm, toon(0, TX.sign), rm, rm, rm], p.x, DECK + 0.4, p.z, { outline: 'mid' });
+        return {};
+      }
+      const faces = side > 0 ? [rm, toon(0, TX.sign), rm, rm, rm, rm] : [toon(0, TX.sign), rm, rm, rm, rm, rm];
+      part(g, dent(box(0.2, 3.4, D - 0.4), 0.09), faces, p.x + side * 1.0, DECK + 1.5, p.z, { rz: -side * 0.5, outline: 'mid' });
+      return {};
+    }
+    case 'fuel':
+      part(g, dent(cyl(1.45, 2.2, 16), 0.18), toon(0, TX.drum), p.x, DECK + 1.1, p.z, { outline: 'mid' });
+      return {};
+    case 'safe': {
+      const sm = toon(0, TX.safeSide);
+      part(g, dent(box(3.0, 1.8, 3.0), 0.05), [sm, sm, toon(0, TX.safeTop), sm, sm, sm], p.x, DECK + 0.9, p.z, { outline: 'mid' });
+      part(g, cyl(0.6, 0.2, 12), toon(0xe0d4b8), p.x - 0.4, DECK + 1.9, p.z);
+      return {};
+    }
+    case 'cargo': {
+      // an open, battered crate; its contents rise as it fills
+      const cw = W - 0.6, cd = D - 0.6, ch = 1.9, t = 0.25, wood = toon(0, TX.wood);
+      part(g, box(cw, 0.25, cd), wood, p.x, DECK + 0.13, p.z, { outline: false });
+      part(g, dent(box(cw, ch, t), 0.06), wood, p.x, DECK + ch / 2, p.z - cd / 2 + t / 2);
+      part(g, dent(box(cw, ch, t), 0.06), wood, p.x, DECK + ch / 2, p.z + cd / 2 - t / 2);
+      part(g, dent(box(t, ch, cd), 0.06), wood, p.x - cw / 2 + t / 2, DECK + ch / 2, p.z);
+      part(g, dent(box(t, ch, cd), 0.06), wood, p.x + cw / 2 - t / 2, DECK + ch / 2, p.z);
+      part(g, box(cw + 0.1, 0.18, 0.4), toon(0, TX.steel), p.x, DECK + ch - 0.1, p.z - cd / 4, { outline: false });
+      const fill = new THREE.Group();
+      fill.position.set(p.x, DECK + 0.25, p.z);
+      g.add(fill);
+      const stuff = [TX.corrRust, TX.drum, TX.jerry, TX.olive, TX.tarp, TX.steel];
+      for (let i = 0; i < 6; i++) {
+        const bw = 0.9 + hs(m.c, m.r, i) * 0.9, bd = 0.9 + hs(m.r, i, 3) * 1.2;
+        part(fill, dent(box(bw, 1, bd), 0.12), toon(0, stuff[i]), (hs(i, m.c, 7) - 0.5) * (cw - bw - 0.6), 0.5, (hs(i, m.r, 9) - 0.5) * (cd - bd - 0.6), { ry: hs(i, 11) * 2, outline: false });
+      }
+      fill.scale.y = 0.001;
+      fill.visible = false;
+      return { fill };
+    }
+    case 'engine': {
+      part(g, dent(box(W - 4.4, 2.0, 2.8), 0.14), toon(0, TX.dark), p.x - 1, DECK + 1.0, p.z, { outline: 'mid' });
+      part(g, dent(box(W - 7, 0.5, 1.4), 0.06), toon(0, TX.primer), p.x - 1, DECK + 2.25, p.z);
+      part(g, cyl(0.9, 0.5, 12), toon(0, TX.steel), p.x + 3.7, DECK + 2.25, p.z);
+      part(g, cyl(0.3, 4.6, 8), toon(0, TX.dark), p.x - 3.6, DECK + 3.0, p.z + 0.9, { rz: 0.06 });
+      part(g, cyl(0.3, 1.4, 8), toon(0, TX.dark), p.x - 3.15, DECK + 5.45, p.z + 0.9, { rz: -1.1, outline: false });
+      const props: THREE.Object3D[] = [];
+      for (const px of [-2.4, 2.4]) {
+        part(g, cyl(0.28, 4.2, 8), toon(0, TX.steel), p.x + px, 0.3, p.z + 2.6, { rx: Math.PI / 2 - 0.25 });
+        const prop = new THREE.Group();
+        prop.position.set(p.x + px, -0.2, p.z + 4.8);
+        g.add(prop);
+        for (let b = 0; b < 3; b++) {
+          const bl = part(prop, box(0.5, 2.0, 0.15), toon(0, TX.steel), 0, 0, 0);
+          bl.position.set(Math.cos(b * 2.094) * 0.9, Math.sin(b * 2.094) * 0.9, 0);
+          bl.rotation.z = b * 2.094 + Math.PI / 2;
+        }
+        props.push(prop);
+      }
+      return { props, exhaust: new THREE.Vector3(p.x - 2.6, DECK + 5.8, p.z + 0.9) };
     }
   }
-
-  const cargo = new THREE.Group();
-  g.add(cargo);
-  return { group: g, cargo, props, flag: { m: flagMesh, base: Float32Array.from(fg.attributes.position.array as Float32Array), w: 3 }, exhaust };
 }

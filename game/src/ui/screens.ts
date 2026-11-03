@@ -1,6 +1,6 @@
 // Start card and end-of-run results.
 import { t } from '../i18n/zh';
-import { Item } from '../inventory/grid';
+import { Item } from '../inventory/hold';
 import { itemName } from '../inventory/items';
 
 function card(parent: HTMLElement, cls: string, html: string) {
@@ -9,16 +9,6 @@ function card(parent: HTMLElement, cls: string, html: string) {
   wrap.innerHTML = `<div class="card">${html}</div>`;
   parent.appendChild(wrap);
   return wrap;
-}
-
-export function showStart(parent: HTMLElement, onGo: () => void) {
-  const w = card(parent, 'start', `
-    <h1>${t('startTitle')}</h1>
-    <p class="sub">${t('startSub')}</p>
-    <p>${t('startHow')}</p>
-    <p class="keys">${t('startKeys')}</p>
-    <button type="button" class="btn-primary">${t('startGo')}</button>`);
-  w.querySelector('button')!.addEventListener('click', () => { w.remove(); onGo(); });
 }
 
 export interface RunResult { win: boolean; kept: Item[]; lostCount: number; lifetime: number }
@@ -40,6 +30,6 @@ export function showResult(parent: HTMLElement, r: RunResult, onAgain: () => voi
     ${r.lostCount ? `<p class="lost">${t('lost')} ${r.lostCount}</p>` : ''}
     <div class="totals"><span>${t('total')}</span><b>${total}</b></div>
     <div class="totals small"><span>${t('lifetime')}</span><b>${r.lifetime}</b></div>
-    <button type="button" class="btn-primary">${t('again')}</button>`);
+    <button type="button" class="btn-primary">${t('backToCamp')}</button>`);
   w.querySelector('button')!.addEventListener('click', () => { w.remove(); onAgain(); });
 }

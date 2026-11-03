@@ -4,6 +4,7 @@ import { clamp } from '../core/noise';
 
 export interface BoatState {
   x: number; z: number; yaw: number;   // yaw = rotation.y; forward = (-sin yaw, -cos yaw)
+  yawRate: number;                     // rad/s, eased so turns build up and settle
   speed: number;                       // along forward, units/s
   throttle: number;                    // 0..1, what the engine is doing this frame
   fuel: number; fuelMax: number;
@@ -15,7 +16,9 @@ export const TUNING = {
   accel: 7,
   drag: 0.55,          // proportional slow-down per second
   brake: 4.0,          // flat slow-down per second when not throttling
-  turnRate: 1.35,      // rad/s
+  turnRate: 1.25,      // rad/s at cruising speed
+  turnAccel: 1.9,      // rad/s² — how fast a turn builds up or unwinds
+  turnSpeedRef: 7,     // below this speed the rudder bites less
   weightSlow: 0.022,   // max speed lost per unit of cargo weight
   minSpeedFactor: 0.5,
   fuelIdle: 0.08,      // per second
@@ -36,14 +39,18 @@ function angleDiff(a: number, b: number) {
 /** input: desired direction on the water (x, z) with magnitude 0..1. */
 export function stepBoat(s: BoatState, ix: number, iz: number, weight: number, dt: number, roofs: Roof[]) {
   const mag = Math.min(1, Math.hypot(ix, iz));
-  let throttle = 0;
+  let throttle = 0, targetRate = 0;
+  const bite = 0.4 + 0.6 * Math.min(1, s.speed / TUNING.turnSpeedRef);
+  const maxRate = TUNING.turnRate * bite * (s.fuel > 0 ? 1 : 0.35);
   if (mag > 0.08) {
-    const target = Math.atan2(-ix, -iz);
-    const diff = angleDiff(s.yaw, target);
-    const turn = TUNING.turnRate * (s.fuel > 0 ? 1 : 0.35) * dt;
-    s.yaw += clamp(diff, -turn, turn);
-    throttle = mag * Math.max(0.25, Math.cos(diff));
+    const diff = angleDiff(s.yaw, Math.atan2(-ix, -iz));
+    // ease into the heading instead of snapping to it
+    targetRate = clamp(diff * 2.0, -maxRate, maxRate);
+    throttle = mag * Math.max(0.3, Math.cos(diff));
   }
+  const acc = TUNING.turnAccel * dt;
+  s.yawRate += clamp(targetRate - s.yawRate, -acc, acc);
+  s.yaw += s.yawRate * dt;
   if (s.fuel <= 0) throttle = 0;
   s.throttle = throttle;
   const cap = speedCap(weight);

@@ -1,8 +1,13 @@
 import './style.css';
 import { buildTextures, redrawTextTextures, FD } from './render/textures';
 import { hs } from './core/noise';
+import { loadSave, writeSave } from './core/save';
+import { Layout } from './inventory/modules';
+import { MAPS } from './world/maps';
 import { Game } from './game';
-import { showStart } from './ui/screens';
+import { Hub } from './ui/hub';
+import { showResult } from './ui/screens';
+import { t } from './i18n/zh';
 
 // paper grain over everything, like the art samples
 (function grain() {
@@ -13,6 +18,7 @@ import { showStart } from './ui/screens';
   x.putImageData(id, 0, 0);
   document.getElementById('grain')!.style.backgroundImage = `url(${g.toDataURL()})`;
 })();
+document.getElementById('rotate')!.textContent = t('rotatePhone');
 
 async function boot() {
   const fonts = document.fonts
@@ -21,15 +27,32 @@ async function boot() {
   // let the loading text paint before the (blocking) texture generation
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
   buildTextures();
+
+  const save = loadSave();
+  const layout = Layout.from(save.layout, save.owned);
+  const persist = () => { save.layout = layout.toJSON(); save.owned = layout.owned; writeSave(save); };
+
   const ui = document.getElementById('ui')!;
   const game = new Game(document.getElementById('gl') as HTMLCanvasElement, ui);
-  game.startRun();
-  game.state = 'idle';
-  game.hud.show(false);
+  const hub = new Hub(ui, layout, save.stash, () => save.lifetime);
+  const toCamp = () => { game.load(MAPS[0], layout, false, 7); hub.show('sail'); };
+
+  hub.onSave = () => { persist(); game.rebuildBoat(layout); };
+  hub.onDepart = (map) => { hub.hide(); persist(); game.load(map, layout, true); };
+  game.onRunEnd = (r) => {
+    for (const it of r.kept) save.stash[it.def.kind] = (save.stash[it.def.kind] ?? 0) + 1;
+    save.lifetime += r.kept.reduce((s, i) => s + i.def.value, 0);
+    save.runs++;
+    persist();
+    showResult(ui, { win: r.win, kept: r.kept, lostCount: r.lost, lifetime: save.lifetime }, toCamp);
+  };
+
+  game.load(MAPS[0], layout, false, 7);
   await fonts;
   redrawTextTextures();
   document.getElementById('loading')?.remove();
-  showStart(ui, () => game.startRun());
-  (window as unknown as { game: Game }).game = game;
+  hub.show('sail');
+  (window as unknown as { game: Game; hub: Hub; layout: Layout }).game = game;
+  Object.assign(window, { hub, layout });
 }
 boot();

@@ -29,6 +29,8 @@ function calmFactor(x: number, z: number): number {
 export const waveH = (x: number, z: number, t: number) => calmFactor(x, z) * GW.reduce((s, g) => s + g.A * Math.sin(g.k * (g.dx * x + g.dz * z) - g.w * t), 0);
 
 const N_CALM = 8;
+export const N_TRAIL = 28;
+export const TRAIL_LIFE = 5.6;
 const GLSL_COMMON = `
   uniform float uTime; uniform vec4 uR[${N_CALM}]; uniform float uA[${N_CALM}];
   float sdb(vec2 p, vec2 b){ vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
@@ -45,6 +47,7 @@ export function createWater() {
     uA: { value: new Array(N_CALM).fill(0) },
     uFlow: { value: new THREE.Vector2(0, 0) },
     uBoat: { value: new THREE.Vector2() }, uFwd: { value: new THREE.Vector2(0, -1) }, uWake: { value: 0 },
+    uTrail: { value: Array.from({ length: N_TRAIL }, () => new THREE.Vector4(1e4, 1e4, 99, 0)) },
     uDeep: { value: new THREE.Color(0x14292a) }, uMid: { value: new THREE.Color(0x2f625b) },
     uShal: { value: new THREE.Color(0x6a9a80) }, uFoam: { value: new THREE.Color(0xe2e4d4) },
     uFogC: { value: new THREE.Color(FOG_COLOR) },
@@ -71,7 +74,7 @@ export function createWater() {
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: GLSL_COMMON + `
-      uniform vec2 uFlow, uBoat, uFwd; uniform float uWake; uniform vec3 uDeep, uMid, uShal, uFoam, uFogC;
+      uniform vec2 uFlow, uBoat, uFwd; uniform float uWake; uniform vec4 uTrail[${N_TRAIL}]; uniform vec3 uDeep, uMid, uShal, uFoam, uFogC;
       varying vec3 vW, vN; varying float vH;
       float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
       float vn2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
@@ -110,23 +113,31 @@ export function createWater() {
         float cap = smoothstep(0.84, 0.92, hn) * smoothstep(0.55, 0.7, 0.6 * vn2(fp * 0.45) + 0.4 * vn2(fp * 1.1 + 4.0));
         float streak = smoothstep(0.7, 0.76, vn2(vec2(dot(fp, vec2(0.94, -0.33)) * 0.1, dot(fp, vec2(0.33, 0.94)) * 0.7))) * 0.2;
         col = mix(col, uFoam, max(cap * 0.6, streak * 0.7) * (1.0 - oil) * (1.0 - sh * 0.7));
-        vec2 bd = p - uBoat; float al = dot(bd, uFwd); float la = dot(bd, vec2(-uFwd.y, uFwd.x));
-        float a = -al - 15.5, wake = 0.0;
-        if (a > -1.0) {
-          float spread = 4.6 + a * 0.36, wdt = 0.3 + a * 0.025;
-          float arm = 1.0 - smoothstep(wdt, wdt + 0.25, abs(abs(la) - spread));
-          float brk = smoothstep(0.32, 0.5, vn2(vec2(a * 0.3 - uTime * 1.1, la * 0.4)));
-          wake = arm * brk * (1.0 - smoothstep(8.0, 44.0 * uWake + 4.0, a)) * smoothstep(-1.0, 1.0, a);
-          float cw = 1.4 + a * 0.13;
-          float churn = (1.0 - smoothstep(cw, cw + 0.8, abs(la))) * (1.0 - smoothstep(3.0, 28.0 * uWake + 3.0, a)) * smoothstep(0.38, 0.62, 0.65 * vn2(vec2(a * 0.3 - uTime * 1.4, la * 0.5) + 3.0) + 0.35 * vn2(vec2(a * 0.9 - uTime * 2.2, la * 1.4) + 8.0));
-          wake = max(wake, churn * 0.9);
+        // wake: every trail point is a ring of foam that keeps spreading where it was laid down,
+        // so the wake stays on the water and curves when the boat turns
+        float wake = 0.0;
+        if (distance(p, uTrail[0].xy) < 80.0) {
+          for (int i = 0; i < ${N_TRAIL}; i++) {
+            vec4 tr = uTrail[i];
+            if (tr.w <= 0.0 || tr.z > ${TRAIL_LIFE.toFixed(1)}) continue;
+            float d = distance(p, tr.xy), age = tr.z;
+            float r = 2.8 + age * 3.6;
+            if (d > r + 3.0) continue;
+            float w = 0.32 + age * 0.07;
+            float ring = 1.0 - smoothstep(w, w + 0.3, abs(d - r));
+            float churn = (1.0 - smoothstep(1.3 + age * 0.45, 2.2 + age * 0.7, d)) * (1.0 - smoothstep(0.4, 2.6, age));
+            wake = max(wake, max(ring * 0.85, churn) * (1.0 - age / ${TRAIL_LIFE.toFixed(1)}) * tr.w);
+          }
+          wake *= mix(0.45, 1.0, smoothstep(0.3, 0.6, vn2(p * 0.42 + uTime * 0.25)));
         }
+        // bow wave, attached to the hull
+        vec2 bd = p - uBoat; float al = dot(bd, uFwd); float la = dot(bd, vec2(-uFwd.y, uFwd.x));
         float b = 20.5 - al;
         if (b > 0.0 && b < 14.0) {
           float bow = 1.0 - smoothstep(0.25, 0.5, abs(abs(la) - (0.4 + b * 0.62)));
-          wake = max(wake, bow * (1.0 - smoothstep(4.0, 14.0, b)) * smoothstep(0.3, 0.45, vn2(vec2(b * 0.6 - uTime * 1.5, la))));
+          wake = max(wake, bow * uWake * (1.0 - smoothstep(4.0, 14.0, b)) * smoothstep(0.3, 0.45, vn2(vec2(b * 0.6 - uTime * 1.5, la))));
         }
-        col = mix(col, uFoam, max(fo * 0.85, wake * 0.85 * uWake));
+        col = mix(col, uFoam, max(fo * 0.85, wake * 0.85));
         col = mix(col, uFogC, smoothstep(${FOG_NEAR.toFixed(1)}, ${FOG_FAR.toFixed(1)}, length(vW - cameraPosition)));
         gl_FragColor = vec4(col, 1.0);
       }`,
@@ -136,7 +147,12 @@ export function createWater() {
 
   return {
     mesh,
-    update(t: number, center: THREE.Vector3, boat: { x: number; z: number; fx: number; fz: number; speed01: number }) {
+    /** trail: newest first, each { x, z, born (sim time), strength 0..1 } */
+    update(t: number, center: THREE.Vector3, boat: { x: number; z: number; fx: number; fz: number; speed01: number }, trail: { x: number; z: number; born: number; k: number }[] = []) {
+      for (let i = 0; i < N_TRAIL; i++) {
+        const tr = trail[i];
+        if (tr) uniforms.uTrail.value[i].set(tr.x, tr.z, t - tr.born, tr.k); else uniforms.uTrail.value[i].set(1e4, 1e4, 99, 0);
+      }
       uniforms.uTime.value = t;
       mesh.position.set(Math.round(center.x / CELL) * CELL, 0, Math.round(center.z / CELL) * CELL);
       uniforms.uBoat.value.set(boat.x, boat.z);
