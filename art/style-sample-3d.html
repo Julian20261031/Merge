@@ -301,6 +301,7 @@ function part(parent, geo, mat, x = 0, y = 0, z = 0, o = {}) {
   geo.translate(-c.x, -c.y, -c.z);
   const m = new THREE.Mesh(geo, mat);
   m.position.set(x + c.x, y + c.y, z + c.z);
+  if (o.order) m.rotation.order = o.order;
   if (o.rx) m.rotation.x = o.rx;
   if (o.ry) m.rotation.y = o.ry;
   if (o.rz) m.rotation.z = o.rz;
@@ -490,33 +491,37 @@ const ROOFS = [
   { x: 20, z: -33.5, w: 10.4, d: 8.4, rot: -0.32, top: 3.2, type: 'stair' },
 ];
 const BILL = { x: -30, z: 18.7, rot: 0.2 };
-const waveH = (x, z, t) => 0.16 * Math.sin(x * 0.21 + t * 1.1) + 0.12 * Math.sin(z * 0.27 - t * 0.9 + x * 0.05) + 0.06 * Math.sin((x + z) * 0.5 + t * 1.7);
+const WAVES = [[0.17, 0.06, 0.22, 1.0], [-0.05, 0.23, 0.14, -0.85], [0.31, -0.22, 0.08, 1.6], [-0.41, -0.37, 0.05, 2.1]];
+const waveH = (x, z, t) => WAVES.reduce((s, [kx, kz, a, w]) => s + a * Math.sin(x * kx + z * kz + t * w), 0);
 const BOAT = { x: -4, z: 8, yaw: -0.42 };
 const FWD = new THREE.Vector2(Math.sin(0.42), -Math.cos(0.42));
+const WAVE_GLSL = `float wv(vec2 p, float t){ return 0.22*sin(dot(p, vec2(0.17, 0.06)) + t*1.0) + 0.14*sin(dot(p, vec2(-0.05, 0.23)) - t*0.85) + 0.08*sin(dot(p, vec2(0.31, -0.22)) + t*1.6) + 0.05*sin(dot(p, vec2(-0.41, -0.37)) + t*2.1); }`;
 const water = new THREE.Mesh(
-  (() => { const g = new THREE.PlaneGeometry(520, 420, 160, 130); g.rotateX(-Math.PI / 2); return g; })(),
+  (() => { const g = new THREE.PlaneGeometry(520, 420, 200, 160); g.rotateX(-Math.PI / 2); return g; })(),
   new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 }, uStep: U.uStep, uBoil: U.uBoil,
       uR: { value: [...ROOFS.map((r) => new THREE.Vector4(r.x, r.z, r.w / 2, r.d / 2)), new THREE.Vector4(BILL.x, BILL.z, 9, 2.2)] },
       uA: { value: [...ROOFS.map((r) => r.rot), BILL.rot] },
       uFlow: { value: FWD.clone().multiplyScalar(-1.3) },
+      uBoat: { value: new THREE.Vector2(BOAT.x, BOAT.z) }, uFwd: { value: FWD.clone() },
       uDeep: { value: new THREE.Color(0x172f2e) }, uMid: { value: new THREE.Color(0x325f59) },
       uShal: { value: new THREE.Color(0x6a9a80) }, uFoam: { value: new THREE.Color(PAL.foam) },
       uFogC: { value: new THREE.Color(FOG) },
     },
     vertexShader: `
       uniform float uTime; varying vec3 vW; varying float vH;
-      float wv(vec2 p, float t){ return 0.16*sin(p.x*0.21+t*1.1) + 0.12*sin(p.y*0.27-t*0.9+p.x*0.05) + 0.06*sin((p.x+p.y)*0.5+t*1.7); }
+      ${WAVE_GLSL}
       void main(){
         vec4 w = modelMatrix * vec4(position, 1.0);
         float h = wv(w.xz, uTime); w.y += h; vH = h; vW = w.xyz;
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: `
-      uniform float uTime, uStep, uBoil; uniform vec4 uR[4]; uniform float uA[4]; uniform vec2 uFlow;
+      uniform float uTime, uStep, uBoil; uniform vec4 uR[4]; uniform float uA[4]; uniform vec2 uFlow, uBoat, uFwd;
       uniform vec3 uDeep, uMid, uShal, uFoam, uFogC;
       varying vec3 vW; varying float vH;
+      ${WAVE_GLSL}
       float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
       float vn2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
         return mix(mix(h21(i), h21(i+vec2(1,0)), f.x), mix(h21(i+vec2(0,1)), h21(i+vec2(1,1)), f.x), f.y); }
@@ -525,37 +530,66 @@ const water = new THREE.Mesh(
         vec2 p = vW.xz;
         float g = clamp((p.x + p.y * 0.7 + 70.0) / 160.0, 0.0, 1.0);
         vec3 col = mix(uMid, uDeep, g);
-        col *= 0.92 + 0.16 * vn2(p * 0.05 + 3.0);
+        col *= 0.94 + 0.12 * vn2(p * 0.04 + 3.0);
         vec2 q = (p + vec2(300.0)) / vec2(17.0, 15.0);
-        col += vec3(0.02, 0.04, 0.03) * step(0.16, fract(q.x)) * step(0.16, fract(q.y)) * step(0.3, h21(floor(q)));
+        col += vec3(0.018, 0.035, 0.028) * step(0.16, fract(q.x)) * step(0.16, fract(q.y)) * step(0.3, h21(floor(q)));
+        // cel-lit swell: three clean light bands from the real wave slope
+        float e = 0.35;
+        vec3 n = normalize(vec3(-(wv(p + vec2(e, 0.0), uTime) - wv(p - vec2(e, 0.0), uTime)) / (2.0 * e), 1.0,
+                                -(wv(p + vec2(0.0, e), uTime) - wv(p - vec2(0.0, e), uTime)) / (2.0 * e)));
+        float d = dot(n, normalize(vec3(-0.45, 0.75, -0.35)));
+        float d0 = dot(vec3(0.0, 1.0, 0.0), normalize(vec3(-0.45, 0.75, -0.35)));
+        col *= mix(0.9, 1.0, smoothstep(d0 - 0.03, d0 - 0.025, d)) * mix(1.0, 1.08, smoothstep(d0 + 0.035, d0 + 0.04, d));
+        float hn = (vH + 0.49) / 0.98;
+        col = mix(col, uShal * 0.95, smoothstep(0.8, 0.82, hn) * 0.22);
+        // shallows and foam around drowned buildings
         float sh = 0.0, fo = 0.0;
         for (int i = 0; i < 4; i++) {
-          vec2 d = p - uR[i].xy; float c = cos(uA[i]), s = sin(uA[i]);
-          d = vec2(c * d.x - s * d.y, s * d.x + c * d.y);
-          float dist = sdb(d, uR[i].zw) + (vn2(d * 0.9 + uStep * 2.3) - 0.5) * 0.5 * uBoil;
+          vec2 dd = p - uR[i].xy; float c = cos(uA[i]), s = sin(uA[i]);
+          dd = vec2(c * dd.x - s * dd.y, s * dd.x + c * dd.y);
+          float dist = sdb(dd, uR[i].zw) + (vn2(dd * 0.6 + uStep * 1.7) - 0.5) * 0.25 * uBoil;
           sh = max(sh, 1.0 - smoothstep(0.0, 3.6, dist));
-          float ang = atan(d.y, d.x);
-          fo = max(fo, (1.0 - smoothstep(0.0, 0.32, abs(dist - 0.45))) * step(0.4, vn2(vec2(ang * 7.0 + float(i) * 5.0, uTime * 1.4))));
-          fo = max(fo, 0.45 * (1.0 - smoothstep(0.0, 0.2, abs(dist - 1.9))) * step(0.55, vn2(vec2(ang * 10.0 + float(i) * 3.0, -uTime))));
+          float ang = atan(dd.y, dd.x);
+          fo = max(fo, (1.0 - smoothstep(0.18, 0.3, abs(dist - 0.45))) * smoothstep(0.38, 0.45, vn2(vec2(ang * 5.0 + float(i) * 5.0, uTime * 0.9))));
+          fo = max(fo, 0.45 * (1.0 - smoothstep(0.1, 0.18, abs(dist - 1.9))) * smoothstep(0.5, 0.58, vn2(vec2(ang * 7.0 + float(i) * 3.0, -uTime * 0.7))));
         }
         col = mix(col, uShal, sh * 0.7);
-        // oil slicks: calm, dark, faintly iridescent
         float oil = smoothstep(0.68, 0.74, vn2(p * 0.06 + vec2(13.0, 7.0)) * 0.65 + vn2(p * 0.15 + uTime * 0.05) * 0.35) * (1.0 - sh);
         float ph = p.x * 0.7 + p.y * 0.35 + vn2(p * 0.3) * 4.0;
         col = mix(col, col * 0.55 + 0.035 * vec3(sin(ph), sin(ph + 2.1), sin(ph + 4.2)) + 0.02, oil * 0.8);
+        // long hand-drawn swell lines drifting past the boat
         vec2 fp = p - uFlow * uTime;
-        vec2 cs = vec2(7.0, 3.4);
-        vec2 cell = floor(fp / cs), lf = fract(fp / cs);
-        float rnd = h21(cell), off = h21(cell + 3.1);
-        lf.y += (vn2(fp * 0.7 + uStep * 3.0) - 0.5) * 0.08 * uBoil;
-        float arc = lf.y - 0.4 - 0.5 * (lf.x - 0.5) * (lf.x - 0.5);
-        float len = smoothstep(0.12, 0.22, lf.x) * (1.0 - smoothstep(0.5 + off * 0.3, 0.6 + off * 0.3, lf.x));
-        float dash = (1.0 - smoothstep(0.035, 0.07, abs(arc))) * len * step(0.42, rnd);
-        col = mix(col, uFoam, dash * (0.3 + 0.28 * off) * (1.0 - sh) * (1.0 - oil));
-        float gl = step(0.978, vn2(p * 1.6 + uStep * 7.0)) * (1.0 - g) * (1.0 - sh) * (1.0 - oil);
-        col = mix(col, vec3(1.0, 0.93, 0.78), gl * 0.7);
-        col = mix(col, uFoam * 0.92, fo * 0.85);
-        col *= 0.95 + 0.1 * step(0.1, vH);
+        float lines = 0.0;
+        for (int k = 0; k < 2; k++) {
+          vec2 dir = k == 0 ? normalize(vec2(0.35, 1.0)) : normalize(vec2(-0.6, 1.0));
+          float warp = (vn2(fp * 0.07 + float(k) * 9.0) - 0.5) * 6.0 + (vn2(fp * 0.5 + uStep * 0.9) - 0.5) * 0.25 * uBoil;
+          float phs = dot(fp, dir) * (k == 0 ? 0.42 : 0.31) + warp;
+          float s = abs(fract(phs) - 0.5) * 2.0;
+          float line = 1.0 - smoothstep(0.035, 0.06, s);
+          float mask = smoothstep(0.64, 0.72, vn2(fp * vec2(0.04, 0.09) + vec2(float(k) * 17.0, 0.0)));
+          lines = max(lines, line * mask * (k == 0 ? 0.42 : 0.26));
+        }
+        col = mix(col, uFoam, lines * (1.0 - sh) * (1.0 - oil));
+        float gl = step(0.988, vn2(p * 1.4 + uStep * 7.0)) * (1.0 - g) * (1.0 - sh) * (1.0 - oil);
+        col = mix(col, vec3(1.0, 0.93, 0.78), gl * 0.6);
+        // wake: smooth V arms, churned water behind the props, bow wave
+        vec2 bd = p - uBoat; float al = dot(bd, uFwd); float la = dot(bd, vec2(-uFwd.y, uFwd.x));
+        float a = -al - 15.5, wake = 0.0;
+        if (a > -1.0) {
+          float spread = 4.6 + a * 0.36, wdt = 0.3 + a * 0.025;
+          float arm = 1.0 - smoothstep(wdt, wdt + 0.25, abs(abs(la) - spread));
+          float brk = smoothstep(0.32, 0.5, vn2(vec2(a * 0.3 - uTime * 1.1, la * 0.4)));
+          wake = arm * brk * (1.0 - smoothstep(8.0, 44.0, a)) * smoothstep(-1.0, 1.0, a);
+          float cw = 1.4 + a * 0.13;
+          float churn = (1.0 - smoothstep(cw, cw + 0.8, abs(la))) * (1.0 - smoothstep(3.0, 28.0, a)) * smoothstep(0.38, 0.62, 0.65 * vn2(vec2(a * 0.3 - uTime * 1.4, la * 0.5) + 3.0) + 0.35 * vn2(vec2(a * 0.9 - uTime * 2.2, la * 1.4) + 8.0));
+          wake = max(wake, churn * 0.9);
+        }
+        float b = 20.5 - al;
+        if (b > 0.0 && b < 14.0) {
+          float bow = 1.0 - smoothstep(0.25, 0.5, abs(abs(la) - (0.4 + b * 0.62)));
+          wake = max(wake, bow * (1.0 - smoothstep(4.0, 14.0, b)) * smoothstep(0.3, 0.45, vn2(vec2(b * 0.6 - uTime * 1.5, la))));
+        }
+        col = mix(col, uFoam, max(fo * 0.85, wake * 0.85));
         col = mix(col, uFogC, smoothstep(85.0, 190.0, length(vW - cameraPosition)));
         gl_FragColor = vec4(col, 1.0);
       }`,
@@ -576,6 +610,64 @@ function hullGeo(pts, s, depth) {
 const DECK = 1.4, C = 4, GX = -6, GZ = -11;
 const boat = new THREE.Group(); boat.rotation.order = 'YXZ'; scene.add(boat);
 part(boat, hullGeo(HULL2D, 0.1, DECK), [toon(0, TX.deck), toon(0, TX.hull)], 0, 0, 0, { outline: 'thick' });
+// raised gunwale of welded plate, with scavenged railings on top
+const HULLW = HULL2D.map(([x, y]) => [x * 0.1, y * 0.1]);   // world x, z
+function offsetPoly(P, d) {
+  const n = P.length, cx = P.reduce((s, p) => s + p[0], 0) / n, cz = P.reduce((s, p) => s + p[1], 0) / n;
+  const raw = P.map((p, i) => {
+    const a = P[(i - 1 + n) % n], b = P[(i + 1) % n];
+    const e1 = [p[0] - a[0], p[1] - a[1]], e2 = [b[0] - p[0], b[1] - p[1]];
+    const l1 = Math.hypot(...e1) || 1, l2 = Math.hypot(...e2) || 1;
+    const n1 = [e1[1] / l1, -e1[0] / l1], n2 = [e2[1] / l2, -e2[0] / l2];
+    let m = [n1[0] + n2[0], n1[1] + n2[1]]; const ml = Math.hypot(...m) || 1; m = [m[0] / ml, m[1] / ml];
+    const k = Math.min(2, 1 / Math.max(0.3, m[0] * n1[0] + m[1] * n1[1]));
+    return [m[0] * k, m[1] * k];
+  });
+  const s = Math.hypot(P[0][0] + raw[0][0] - cx, P[0][1] + raw[0][1] - cz) > Math.hypot(P[0][0] - cx, P[0][1] - cz) ? 1 : -1;
+  return P.map((p, i) => [p[0] + raw[i][0] * d * s, p[1] + raw[i][1] * d * s]);
+}
+function ringGeo(outer, inner, depth) {
+  const sh = new THREE.Shape(); outer.forEach(([x, z], i) => (i ? sh.lineTo(x, -z) : sh.moveTo(x, -z))); sh.closePath();
+  const ho = new THREE.Path(); inner.forEach(([x, z], i) => (i ? ho.lineTo(x, -z) : ho.moveTo(x, -z))); ho.closePath();
+  sh.holes.push(ho);
+  const g = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: false });
+  g.rotateX(-Math.PI / 2);
+  return g;
+}
+TX.rim = genTex(128, 128, weather(0x6b6458, { seed: 23, rust: 0.6, fade: 0.25 }), null, { repeat: [0.3, 0.3] });
+const RIM_H = 0.6;
+{
+  const rim = new THREE.Mesh(ringGeo(offsetPoly(HULLW, -0.02), offsetPoly(HULLW, -0.62), RIM_H), toon(0, TX.rim));
+  rim.position.y = DECK - 0.01; boat.add(rim);
+  const ink = new THREE.Mesh(ringGeo(offsetPoly(HULLW, 0.12), offsetPoly(HULLW, -0.78), RIM_H + 0.14), new THREE.MeshBasicMaterial({ color: PAL.ink, side: THREE.BackSide }));
+  ink.position.y = DECK - 0.06; boat.add(ink);
+}
+{
+  const path = offsetPoly(HULLW, -0.32), top = DECK + RIM_H;
+  const pts = [];
+  for (let i = 0; i < path.length; i++) {
+    const a = path[i], b = path[(i + 1) % path.length], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L / 2.6));
+    for (let k = 0; k < n; k++) pts.push([a[0] + (b[0] - a[0]) * (k / n), a[1] + (b[1] - a[1]) * (k / n)]);
+  }
+  const gap = ([x, z]) => z < -18.5 || (z > 15.5 && Math.abs(x) < 3.2) || (x < 0 && z > -5.2 && z < -0.8);
+  const railM = toon(0, TX.steel);
+  pts.forEach((p, i) => {
+    const q = pts[(i + 1) % pts.length];
+    if (!gap(p)) part(boat, cyl(0.09, 1.25, 6), railM, p[0], top + 0.62, p[1], { rz: (hs(i, 71) - 0.5) * 0.12, outline: 'thin' });
+    if (gap(p) || gap(q)) return;
+    const mx = (p[0] + q[0]) / 2, mz = (p[1] + q[1]) / 2, L = Math.hypot(q[0] - p[0], q[1] - p[1]), ang = Math.atan2(q[0] - p[0], q[1] - p[1]);
+    const r = hs(i, 72);
+    if (r < 0.14) return;                                   // missing section
+    if (r < 0.4) {                                          // patched with a corrugated plate
+      part(boat, dent(box(0.1, 1.0, L * 0.98), 0.06), toon(0, TX.corrRust), mx, top + 0.5, mz, { ry: ang, outline: 'thin' });
+      return;
+    }
+    [0.62, 1.18].forEach((y, k) => {                        // two pipe rails, one sometimes sagging
+      const sag = k === 1 && r > 0.85 ? -0.25 : 0;
+      part(boat, cyl(0.07, L, 6), railM, mx, top + y + sag, mz, { rx: Math.PI / 2, ry: ang, rz: sag ? 0.15 : 0, order: 'YXZ', outline: 'thin' });
+    });
+  });
+}
 {
   const v = [];
   for (let i = 0; i <= 3; i++) v.push(GX + i * C, DECK + 0.03, GZ, GX + i * C, DECK + 0.03, GZ + 6 * C);
@@ -856,10 +948,6 @@ const gulls = [0, 1].map((i) => {
   return g;
 });
 // stateless effects: wake flecks and smoke puffs are pure functions of time
-const wakeBits = Array.from({ length: 46 }, () => {
-  const m = new THREE.Mesh(new THREE.CircleGeometry(1, 7), new THREE.MeshBasicMaterial({ color: PAL.foam, transparent: true, depthWrite: false }));
-  m.rotation.x = -Math.PI / 2; scene.add(m); return m;
-});
 const puffGeo = new THREE.IcosahedronGeometry(1, 0);
 function smokeSet(n, color) {
   return Array.from({ length: n }, () => { const m = new THREE.Mesh(puffGeo, new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false })); scene.add(m); return m; });
@@ -950,17 +1038,6 @@ function frame(now) {
     g.rotation.y = -a;
     const fl = Math.sin(T * 7 + i * 2) * 0.5;
     g.userData.L.rotation.z = fl; g.userData.R.rotation.z = -fl;
-  });
-  const side = new THREE.Vector2(-FWD.y, FWD.x);
-  const stern = new THREE.Vector2(bx, bz).addScaledVector(FWD, -16);
-  wakeBits.forEach((m, i) => {
-    const arm = i % 3, s = ((T / 3.2) + hs(i, 4)) % 1;
-    const lat = arm === 2 ? (hs(i, 5) - 0.5) * 3 * (0.4 + s) : (arm ? 1 : -1) * (4.5 + s * 12);
-    const p = stern.clone().addScaledVector(FWD, -s * 30).addScaledVector(side, lat);
-    m.position.set(p.x, waveH(p.x, p.y, T) + 0.08, p.y);
-    const sc = (arm === 2 ? 1.1 : 0.7) * (0.6 + s * 1.4);
-    m.scale.set(sc * 1.6, sc, 1); m.rotation.z = BOAT.yaw + (hs(i, 6) - 0.5);
-    m.material.opacity = (1 - s) * (arm === 2 ? 0.7 : 0.55);
   });
 
   const idle = (now - cam.lastDrag) > 4000;
