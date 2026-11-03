@@ -107,15 +107,11 @@ footer { font-size: 12px; color: var(--bone-dim); border-top: 1px solid var(--li
         <button type="button" id="v-low" data-view="low" aria-pressed="false">低角度</button>
       </div></div>
       <div class="seg"><span>动画节奏</span><div class="opts" role="group" aria-label="动画节奏">
-        <button type="button" id="r-two" data-rate="2" aria-pressed="true">一拍二</button>
-        <button type="button" id="r-one" data-rate="1" aria-pressed="false">流畅</button>
-      </div></div>
-      <div class="seg"><span>线条沸腾</span><div class="opts" role="group" aria-label="线条沸腾">
-        <button type="button" id="b-on" data-boil="1" aria-pressed="true">开</button>
-        <button type="button" id="b-off" data-boil="0" aria-pressed="false">关</button>
+        <button type="button" id="r-two" data-rate="2" aria-pressed="false">一拍二</button>
+        <button type="button" id="r-one" data-rate="1" aria-pressed="true">流畅</button>
       </div></div>
     </div>
-    <p class="hint">左右拖动画面可以转镜头。“低角度”能看到远处倒塌的高楼。</p>
+    <p class="hint">左右拖动画面可以转镜头。“低角度”最能看出海浪的起伏，也能看到远处倒塌的高楼。</p>
   </div>
 
   <section>
@@ -276,7 +272,7 @@ float h31(vec3 p){ p = fract(p * 0.3183 + 0.1); p *= 17.0; return fract(p.x * p.
 float vn3(vec3 x){ vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(mix(h31(i), h31(i + vec3(1,0,0)), f.x), mix(h31(i + vec3(0,1,0)), h31(i + vec3(1,1,0)), f.x), f.y),
              mix(mix(h31(i + vec3(0,0,1)), h31(i + vec3(1,0,1)), f.x), mix(h31(i + vec3(0,1,1)), h31(i + vec3(1,1,1)), f.x), f.y), f.z); }`;
-const U = { uStep: { value: 0 }, uBoil: { value: 1 } };
+const U = { uStep: { value: 0 }, uBoil: { value: 0 } };
 function outlineMat(thick) {
   return new THREE.ShaderMaterial({
     uniforms: { uStep: U.uStep, uBoil: U.uBoil, uT: { value: thick }, uC: { value: new THREE.Color(PAL.ink) } },
@@ -491,87 +487,105 @@ const ROOFS = [
   { x: 20, z: -33.5, w: 10.4, d: 8.4, rot: -0.32, top: 3.2, type: 'stair' },
 ];
 const BILL = { x: -30, z: 18.7, rot: 0.2 };
-const WAVES = [[0.17, 0.06, 0.22, 1.0], [-0.05, 0.23, 0.14, -0.85], [0.31, -0.22, 0.08, 1.6], [-0.41, -0.37, 0.05, 2.1]];
-const waveH = (x, z, t) => WAVES.reduce((s, [kx, kz, a, w]) => s + a * Math.sin(x * kx + z * kz + t * w), 0);
+// layered Gerstner swell: real crests and troughs, flattened near the drowned buildings
+const GW = [[0.35, 1, 34, 0.75], [-0.55, 1, 21, 0.4], [1, 0.3, 12, 0.2], [-0.2, -1, 7, 0.1]].map(([dx, dz, L, A]) => {
+  const l = Math.hypot(dx, dz), k = (2 * Math.PI) / L;
+  return { dx: dx / l, dz: dz / l, k, A, w: Math.sqrt(9.8 * k) * 0.55, L };
+});
+const CALM = [...ROOFS.map((r) => [r.x, r.z, r.w / 2, r.d / 2, r.rot]), [BILL.x, BILL.z, 9, 2.2, BILL.rot]];
+function calm(x, z) {
+  let m = 1e3;
+  for (const [cx, cz, hx, hz, r] of CALM) {
+    const dx = x - cx, dz = z - cz, c = Math.cos(r), s = Math.sin(r);
+    const px = Math.abs(c * dx - s * dz) - hx, pz = Math.abs(s * dx + c * dz) - hz;
+    m = Math.min(m, Math.hypot(Math.max(px, 0), Math.max(pz, 0)) + Math.min(Math.max(px, pz), 0));
+  }
+  const t = Math.min(1, Math.max(0, (m - 1) / 13));
+  return 0.22 + 0.78 * t * t * (3 - 2 * t);
+}
+const waveH = (x, z, t) => calm(x, z) * GW.reduce((s, g) => s + g.A * Math.sin(g.k * (g.dx * x + g.dz * z) - g.w * t), 0);
 const BOAT = { x: -4, z: 8, yaw: -0.42 };
 const FWD = new THREE.Vector2(Math.sin(0.42), -Math.cos(0.42));
-const WAVE_GLSL = `float wv(vec2 p, float t){ return 0.22*sin(dot(p, vec2(0.17, 0.06)) + t*1.0) + 0.14*sin(dot(p, vec2(-0.05, 0.23)) - t*0.85) + 0.08*sin(dot(p, vec2(0.31, -0.22)) + t*1.6) + 0.05*sin(dot(p, vec2(-0.41, -0.37)) + t*2.1); }`;
+const GLSL_COMMON = `
+  uniform float uTime; uniform vec4 uR[4]; uniform float uA[4];
+  float sdb(vec2 p, vec2 b){ vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
+  float roofDist(vec2 p){ float m = 1e3; for (int i = 0; i < 4; i++) { vec2 d = p - uR[i].xy; float c = cos(uA[i]), s = sin(uA[i]); m = min(m, sdb(vec2(c * d.x - s * d.y, s * d.x + c * d.y), uR[i].zw)); } return m; }`;
+const GW_GLSL = GW.map((g) => `gw(vec2(${g.dx.toFixed(4)}, ${g.dz.toFixed(4)}), ${g.k.toFixed(4)}, ${g.A.toFixed(3)}, ${g.w.toFixed(4)}, p, off, nrm);`).join('\n        ');
 const water = new THREE.Mesh(
-  (() => { const g = new THREE.PlaneGeometry(520, 420, 200, 160); g.rotateX(-Math.PI / 2); return g; })(),
+  (() => { const g = new THREE.PlaneGeometry(400, 340, 280, 240); g.rotateX(-Math.PI / 2); return g; })(),
   new THREE.ShaderMaterial({
     uniforms: {
-      uTime: { value: 0 }, uStep: U.uStep, uBoil: U.uBoil,
-      uR: { value: [...ROOFS.map((r) => new THREE.Vector4(r.x, r.z, r.w / 2, r.d / 2)), new THREE.Vector4(BILL.x, BILL.z, 9, 2.2)] },
-      uA: { value: [...ROOFS.map((r) => r.rot), BILL.rot] },
+      uTime: { value: 0 },
+      uR: { value: CALM.map(([x, z, hx, hz]) => new THREE.Vector4(x, z, hx, hz)) },
+      uA: { value: CALM.map((c) => c[4]) },
       uFlow: { value: FWD.clone().multiplyScalar(-1.3) },
       uBoat: { value: new THREE.Vector2(BOAT.x, BOAT.z) }, uFwd: { value: FWD.clone() },
-      uDeep: { value: new THREE.Color(0x172f2e) }, uMid: { value: new THREE.Color(0x325f59) },
+      uDeep: { value: new THREE.Color(0x14292a) }, uMid: { value: new THREE.Color(0x2f625b) },
       uShal: { value: new THREE.Color(0x6a9a80) }, uFoam: { value: new THREE.Color(PAL.foam) },
       uFogC: { value: new THREE.Color(FOG) },
     },
-    vertexShader: `
-      uniform float uTime; varying vec3 vW; varying float vH;
-      ${WAVE_GLSL}
+    vertexShader: GLSL_COMMON + `
+      varying vec3 vW, vN; varying float vH;
+      const float Q = 0.6;
+      void gw(vec2 D, float k, float A, float w, vec2 p, inout vec3 off, inout vec3 nrm){
+        float f = k * dot(D, p) - w * uTime, c = cos(f), s = sin(f);
+        off += vec3(Q * A * D.x * c, A * s, Q * A * D.y * c);
+        nrm -= vec3(D.x * k * A * c, Q * k * A * s, D.y * k * A * c);
+      }
       void main(){
         vec4 w = modelMatrix * vec4(position, 1.0);
-        float h = wv(w.xz, uTime); w.y += h; vH = h; vW = w.xyz;
+        vec2 p = w.xz;
+        float at = 0.22 + 0.78 * smoothstep(1.0, 14.0, roofDist(p));
+        vec3 off = vec3(0.0), nrm = vec3(0.0, 1.0, 0.0);
+        ${GW_GLSL}
+        w.xyz += off * at;
+        vN = normalize(vec3(nrm.x * at, 1.0 - (1.0 - nrm.y) * at, nrm.z * at));
+        vH = off.y * at; vW = w.xyz;
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
-    fragmentShader: `
-      uniform float uTime, uStep, uBoil; uniform vec4 uR[4]; uniform float uA[4]; uniform vec2 uFlow, uBoat, uFwd;
-      uniform vec3 uDeep, uMid, uShal, uFoam, uFogC;
-      varying vec3 vW; varying float vH;
-      ${WAVE_GLSL}
+    fragmentShader: GLSL_COMMON + `
+      uniform vec2 uFlow, uBoat, uFwd; uniform vec3 uDeep, uMid, uShal, uFoam, uFogC;
+      varying vec3 vW, vN; varying float vH;
       float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
       float vn2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
         return mix(mix(h21(i), h21(i+vec2(1,0)), f.x), mix(h21(i+vec2(0,1)), h21(i+vec2(1,1)), f.x), f.y); }
-      float sdb(vec2 p, vec2 b){ vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
       void main(){
         vec2 p = vW.xz;
+        vec3 n = normalize(vN);
+        vec3 L = normalize(vec3(-0.45, 0.75, -0.35)), V = normalize(cameraPosition - vW);
         float g = clamp((p.x + p.y * 0.7 + 70.0) / 160.0, 0.0, 1.0);
-        vec3 col = mix(uMid, uDeep, g);
-        col *= 0.94 + 0.12 * vn2(p * 0.04 + 3.0);
-        vec2 q = (p + vec2(300.0)) / vec2(17.0, 15.0);
-        col += vec3(0.018, 0.035, 0.028) * step(0.16, fract(q.x)) * step(0.16, fract(q.y)) * step(0.3, h21(floor(q)));
-        // cel-lit swell: three clean light bands from the real wave slope
-        float e = 0.35;
-        vec3 n = normalize(vec3(-(wv(p + vec2(e, 0.0), uTime) - wv(p - vec2(e, 0.0), uTime)) / (2.0 * e), 1.0,
-                                -(wv(p + vec2(0.0, e), uTime) - wv(p - vec2(0.0, e), uTime)) / (2.0 * e)));
-        float d = dot(n, normalize(vec3(-0.45, 0.75, -0.35)));
-        float d0 = dot(vec3(0.0, 1.0, 0.0), normalize(vec3(-0.45, 0.75, -0.35)));
-        col *= mix(0.9, 1.0, smoothstep(d0 - 0.03, d0 - 0.025, d)) * mix(1.0, 1.08, smoothstep(d0 + 0.035, d0 + 0.04, d));
-        float hn = (vH + 0.49) / 0.98;
-        col = mix(col, uShal * 0.95, smoothstep(0.8, 0.82, hn) * 0.22);
+        float hn = clamp(vH / 1.45 * 0.5 + 0.5, 0.0, 1.0);
+        // troughs deep and dark, crests lighter and greener (light through the wave)
+        vec3 trough = mix(uDeep * 1.15, uDeep * 0.85, g);
+        vec3 crest = mix(uMid * 1.3 + vec3(0.02, 0.05, 0.03), uMid, g * 0.6);
+        vec3 col = mix(trough, crest, smoothstep(0.2, 0.9, hn));
+        col *= 0.95 + 0.1 * vn2(p * 0.05 + 3.0);
+        // soft three-step lighting from the wave slope
+        float d = dot(n, L);
+        col *= 0.8 + 0.13 * smoothstep(0.55, 0.62, d) + 0.12 * smoothstep(0.78, 0.84, d);
+        // grazing angles pick up the hazy sky; glitter where the sun reflects
+        float fr = pow(1.0 - max(dot(n, V), 0.0), 4.0);
+        col = mix(col, uFogC * 1.4, fr * 0.55);
+        float sp = smoothstep(0.972, 0.982, dot(n, normalize(L + V)));
         // shallows and foam around drowned buildings
-        float sh = 0.0, fo = 0.0;
+        float rd = roofDist(p), sh = 1.0 - smoothstep(0.0, 3.6, rd), fo = 0.0;
         for (int i = 0; i < 4; i++) {
           vec2 dd = p - uR[i].xy; float c = cos(uA[i]), s = sin(uA[i]);
           dd = vec2(c * dd.x - s * dd.y, s * dd.x + c * dd.y);
-          float dist = sdb(dd, uR[i].zw) + (vn2(dd * 0.6 + uStep * 1.7) - 0.5) * 0.25 * uBoil;
-          sh = max(sh, 1.0 - smoothstep(0.0, 3.6, dist));
-          float ang = atan(dd.y, dd.x);
-          fo = max(fo, (1.0 - smoothstep(0.18, 0.3, abs(dist - 0.45))) * smoothstep(0.38, 0.45, vn2(vec2(ang * 5.0 + float(i) * 5.0, uTime * 0.9))));
-          fo = max(fo, 0.45 * (1.0 - smoothstep(0.1, 0.18, abs(dist - 1.9))) * smoothstep(0.5, 0.58, vn2(vec2(ang * 7.0 + float(i) * 3.0, -uTime * 0.7))));
+          float dist = sdb(dd, uR[i].zw), ang = atan(dd.y, dd.x);
+          fo = max(fo, (1.0 - smoothstep(0.18, 0.32, abs(dist - 0.45))) * smoothstep(0.36, 0.45, vn2(vec2(ang * 5.0 + float(i) * 5.0, uTime * 0.9))));
+          fo = max(fo, 0.45 * (1.0 - smoothstep(0.1, 0.2, abs(dist - 1.9))) * smoothstep(0.5, 0.58, vn2(vec2(ang * 7.0 + float(i) * 3.0, -uTime * 0.7))));
         }
-        col = mix(col, uShal, sh * 0.7);
-        float oil = smoothstep(0.68, 0.74, vn2(p * 0.06 + vec2(13.0, 7.0)) * 0.65 + vn2(p * 0.15 + uTime * 0.05) * 0.35) * (1.0 - sh);
+        col = mix(col, uShal * (0.85 + 0.25 * hn), sh * 0.7);
+        float oil = smoothstep(0.73, 0.78, vn2(p * 0.06 + vec2(13.0, 7.0)) * 0.65 + vn2(p * 0.15 + uTime * 0.05) * 0.35) * (1.0 - sh);
         float ph = p.x * 0.7 + p.y * 0.35 + vn2(p * 0.3) * 4.0;
         col = mix(col, col * 0.55 + 0.035 * vec3(sin(ph), sin(ph + 2.1), sin(ph + 4.2)) + 0.02, oil * 0.8);
-        // long hand-drawn swell lines drifting past the boat
-        vec2 fp = p - uFlow * uTime;
-        float lines = 0.0;
-        for (int k = 0; k < 2; k++) {
-          vec2 dir = k == 0 ? normalize(vec2(0.35, 1.0)) : normalize(vec2(-0.6, 1.0));
-          float warp = (vn2(fp * 0.07 + float(k) * 9.0) - 0.5) * 6.0 + (vn2(fp * 0.5 + uStep * 0.9) - 0.5) * 0.25 * uBoil;
-          float phs = dot(fp, dir) * (k == 0 ? 0.42 : 0.31) + warp;
-          float s = abs(fract(phs) - 0.5) * 2.0;
-          float line = 1.0 - smoothstep(0.035, 0.06, s);
-          float mask = smoothstep(0.64, 0.72, vn2(fp * vec2(0.04, 0.09) + vec2(float(k) * 17.0, 0.0)));
-          lines = max(lines, line * mask * (k == 0 ? 0.42 : 0.26));
-        }
-        col = mix(col, uFoam, lines * (1.0 - sh) * (1.0 - oil));
-        float gl = step(0.988, vn2(p * 1.4 + uStep * 7.0)) * (1.0 - g) * (1.0 - sh) * (1.0 - oil);
-        col = mix(col, vec3(1.0, 0.93, 0.78), gl * 0.6);
+        col = mix(col, vec3(1.0, 0.94, 0.8), sp * 0.6 * (1.0 - oil));
+        // whitecaps on the crests, and faint foam streaks stretched along the swell
+        vec2 fp = p - uFlow * uTime * 0.4;
+        float cap = smoothstep(0.76, 0.86, hn) * smoothstep(0.42, 0.62, 0.6 * vn2(fp * 0.35) + 0.4 * vn2(fp * 0.9 + 4.0));
+        float streak = smoothstep(0.7, 0.76, vn2(vec2(dot(fp, vec2(0.94, -0.33)) * 0.1, dot(fp, vec2(0.33, 0.94)) * 0.7))) * 0.2;
+        col = mix(col, uFoam, max(cap * 0.8, streak) * (1.0 - oil) * (1.0 - sh * 0.7));
         // wake: smooth V arms, churned water behind the props, bow wave
         vec2 bd = p - uBoat; float al = dot(bd, uFwd); float la = dot(bd, vec2(-uFwd.y, uFwd.x));
         float a = -al - 15.5, wake = 0.0;
@@ -963,7 +977,7 @@ canvas.addEventListener('pointerdown', (e) => { dragX = e.clientX; cam.lastDrag 
 window.addEventListener('pointermove', (e) => { if (dragX === null) return; cam.drag += (e.clientX - dragX) * 0.006; dragX = e.clientX; cam.lastDrag = performance.now(); });
 window.addEventListener('pointerup', () => { dragX = null; });
 window.addEventListener('pointercancel', () => { dragX = null; });
-const state = { rate: 2, boil: 1 };
+const state = { rate: 1 };
 function group(sel, attr, apply) {
   document.querySelectorAll(sel).forEach((b) => b.addEventListener('click', () => {
     document.querySelectorAll(sel).forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
@@ -972,7 +986,6 @@ function group(sel, attr, apply) {
 }
 group('[data-view]', 'view', (v) => { cam.goal = VIEWS[v]; });
 group('[data-rate]', 'rate', (v) => { state.rate = Number(v); });
-group('[data-boil]', 'boil', (v) => { state.boil = Number(v); });
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
   if (!w || !h) return;
@@ -987,24 +1000,29 @@ const TARGET = new THREE.Vector3(2, 0, 0);
 const tmp = new THREE.Vector3();
 let visible = true;
 document.addEventListener('visibilitychange', () => { visible = !document.hidden; });
+function ride(obj, x, z, yaw, fwdL, aftL, half, T, sink) {
+  const fx = -Math.sin(yaw), fz = -Math.cos(yaw), sx = Math.cos(yaw), sz = -Math.sin(yaw);
+  const hb = waveH(x + fx * fwdL, z + fz * fwdL, T), ha = waveH(x - fx * aftL, z - fz * aftL, T);
+  const hs1 = waveH(x + sx * half, z + sz * half, T), hp = waveH(x - sx * half, z - sz * half, T);
+  obj.position.set(x, (hb + ha + hs1 + hp + 2 * waveH(x, z, T)) / 6 + sink, z);
+  obj.rotation.set(Math.atan2(hb - ha, fwdL + aftL), yaw, Math.atan2(hs1 - hp, 2 * half));
+}
 function frame(now) {
   requestAnimationFrame(frame);
   if (!visible) return;
   const real = REDUCE ? 0 : now / 1000;
   const drawing = Math.floor(real * 12);
   const T = state.rate === 2 ? drawing / 12 : real;
-  U.uStep.value = state.boil ? drawing % 3 : 0;
-  U.uBoil.value = state.boil;
+  U.uStep.value = 0;
+  U.uBoil.value = 0;
   water.material.uniforms.uTime.value = T;
 
   const bx = BOAT.x, bz = BOAT.z;
-  boat.position.set(bx, waveH(bx, bz, T) * 0.7 - 0.55, bz);
-  boat.rotation.set((waveH(bx, bz + 8, T) - waveH(bx, bz - 8, T)) * 0.05, BOAT.yaw, (waveH(bx - 4, bz, T) - waveH(bx + 4, bz, T)) * 0.08);
-  blob.position.set(bx + 0.8, 0.02 + waveH(bx, bz, T), bz + 1); blob.rotation.z = BOAT.yaw;
+  ride(boat, bx, bz, BOAT.yaw, 14, 12, 6.5, T, -0.2);
+  blob.visible = false;
   ANIM.props.forEach((p, i) => { p.rotation.z = T * 14 * (i ? -1 : 1); });
   ANIM.cellLight.intensity = 1.2 + 0.4 * Math.sin(T * 5);
-  enemy.position.set(ENEMY_POS.x, waveH(ENEMY_POS.x, ENEMY_POS.z, T) * 0.8 - 0.45, ENEMY_POS.z);
-  enemy.rotation.set(0.03 * Math.sin(T * 1.7), EYAW, 0.04 * Math.sin(T * 1.3 + 1));
+  ride(enemy, ENEMY_POS.x, ENEMY_POS.z, EYAW, 10, 7, 4.5, T, -0.15);
   const fwdE = tmp.set(-Math.sin(EYAW), 0, -Math.cos(EYAW));
   tele.position.copy(ENEMY_POS).addScaledVector(fwdE, 11).setY(0.5); tele.rotation.y = EYAW;
   ANIM.wedge.material.opacity = 0.18 + 0.14 * (0.5 + 0.5 * Math.sin(T * 6));
