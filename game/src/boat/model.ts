@@ -11,7 +11,7 @@ const ROPE = 0x8a7550, TYRE = 0x2b2a27;
 
 export const cellCenter = (c: number, r: number, w: number, h: number) => new THREE.Vector3(GX + (c + w / 2) * CELL, DECK, GZ + (r + h / 2) * CELL);
 
-function hullGeo(pts: number[][], s: number, depth: number) {
+export function hullGeo(pts: number[][], s: number, depth: number) {
   const sh = new THREE.Shape();
   pts.forEach(([x, y], i) => (i ? sh.lineTo(x * s, -y * s) : sh.moveTo(x * s, -y * s)));
   sh.closePath();

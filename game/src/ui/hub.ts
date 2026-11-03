@@ -15,6 +15,7 @@ const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, parent?: 
   return e;
 };
 const MOD_COLOR: Record<ModType, string> = { cannon: '#5d6764', gun: '#8c3b28', armor: '#2b5c9e', cargo: '#b89668', fuel: '#a8402a', engine: '#3a3833', safe: '#d6a92a' };
+const enemyList = (m: MapDef) => (Object.keys(m.enemies) as (keyof MapDef['enemies'])[]).filter((k) => m.enemies[k] > 0).map((k) => `${t(`enemy_${k}` as StrKey)}×${m.enemies[k]}`).join(' ') || t('noEnemies');
 const level = (n: number) => t((['low', 'mid', 'high'] as StrKey[])[Math.max(0, Math.min(2, n))]);
 
 type Tab = 'sail' | 'dock' | 'stash';
@@ -71,7 +72,7 @@ export class Hub {
       const c = h('section', `map-card d${m.danger}`, wrap);
       h('h2', '', c, t(m.name));
       h('p', '', c, t(m.desc));
-      h('dl', '', c, `<dt>${t('richness')}</dt><dd>${level(i)}</dd><dt>${t('danger')}</dt><dd>${level(m.danger - 1)}<small>${t('dangerSoon')}</small></dd><dt>${t('area')}</dt><dd>${[t('small'), t('mid'), t('big')][i]}</dd>`);
+      h('dl', '', c, `<dt>${t('richness')}</dt><dd>${level(i)}</dd><dt>${t('danger')}</dt><dd>${level(m.danger - 1)}<small>${enemyList(m)}</small></dd><dt>${t('area')}</dt><dd>${[t('small'), t('mid'), t('big')][i]}</dd>`);
       const b = h('button', 'btn-primary', c, t('depart')) as HTMLButtonElement;
       b.type = 'button';
       b.addEventListener('click', () => this.onDepart?.(m));

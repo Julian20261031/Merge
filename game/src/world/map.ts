@@ -5,9 +5,10 @@ import { toon, part, box, cyl, dent } from '../render/toon';
 import { mulberry32, hs } from '../core/noise';
 import { Calm, waveH } from '../render/water';
 import { MapDef } from './maps';
+import { ItemDef } from '../inventory/items';
 
 export interface Roof { x: number; z: number; w: number; d: number; rot: number; top: number; type: 'tank' | 'shack' | 'stair' | 'garden' }
-export interface Spot { x: number; z: number; richness: number; looted: boolean; progress: number; group: THREE.Group; ring: THREE.Mesh; spark: THREE.Mesh; sink: number }
+export interface Spot { fixed?: ItemDef[]; x: number; z: number; richness: number; looted: boolean; progress: number; group: THREE.Group; ring: THREE.Mesh; spark: THREE.Mesh; sink: number }
 export interface Dock { x: number; z: number; r: number; pier: Roof }
 
 let ROOF_TEX: { tops: THREE.Texture[]; sides: THREE.Texture[] } | null = null;
@@ -15,6 +16,7 @@ let ROOF_TEX: { tops: THREE.Texture[]; sides: THREE.Texture[] } | null = null;
 export interface World {
   roofs: Roof[]; spots: Spot[]; dock: Dock; calm: Calm[]; radius: number;
   dockRing: THREE.Mesh;
+  addSpot(x: number, z: number, richness: number, fixed?: ItemDef[]): Spot;
   update(t: number, dt: number): void;
 }
 
@@ -179,6 +181,12 @@ export function buildWorld(scene: THREE.Object3D, seed: number, map: MapDef): Wo
 
   return {
     roofs: [...roofs, pier], spots: spotObjs, dock, calm, dockRing, radius: R0,
+    addSpot(x: number, z: number, richness: number, fixed?: ItemDef[]) {
+      const sp = buildSpot(scene, { x, z, richness }, spotObjs.length + 50);
+      sp.fixed = fixed;
+      spotObjs.push(sp);
+      return sp;
+    },
     update(t: number, dt: number) {
       for (const j of junk) j.m.position.y = waveH(j.x, j.z, t) + j.lift;
       for (const s of spotObjs) {

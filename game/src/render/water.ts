@@ -38,7 +38,7 @@ const GLSL_COMMON = `
 const GW_GLSL = GW.map((g) => `gw(vec2(${g.dx.toFixed(4)}, ${g.dz.toFixed(4)}), ${g.k.toFixed(4)}, ${g.A.toFixed(3)}, ${g.w.toFixed(4)}, p, off, nrm);`).join('\n');
 
 export function createWater() {
-  const SIZE = 320, SEGS = 192, CELL = SIZE / SEGS;
+  const SIZE = 520, SEGS = 240, CELL = SIZE / SEGS;
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEGS, SEGS);
   geo.rotateX(-Math.PI / 2);
   const uniforms = {

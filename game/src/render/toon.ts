@@ -4,8 +4,8 @@ import { fbm } from '../core/noise';
 
 export const INK = 0x22170f;
 export const FOG_COLOR = 0x2c4744;
-export const FOG_NEAR = 90;
-export const FOG_FAR = 230;
+export const FOG_NEAR = 140;
+export const FOG_FAR = 330;
 
 const ramp = new THREE.DataTexture(new Uint8Array([80, 165, 255]), 3, 1, THREE.RedFormat);
 ramp.minFilter = ramp.magFilter = THREE.NearestFilter;

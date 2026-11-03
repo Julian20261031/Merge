@@ -44,7 +44,7 @@ async function boot() {
     save.lifetime += r.kept.reduce((s, i) => s + i.def.value, 0);
     save.runs++;
     persist();
-    showResult(ui, { win: r.win, kept: r.kept, lostCount: r.lost, lifetime: save.lifetime }, toCamp);
+    showResult(ui, { win: r.win, sunk: r.reason === 'sunk', kept: r.kept, lostCount: r.lost, lifetime: save.lifetime }, toCamp);
   };
 
   game.load(MAPS[0], layout, false, 7);

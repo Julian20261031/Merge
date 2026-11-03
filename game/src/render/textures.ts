@@ -174,6 +174,21 @@ export function buildTextures() {
     return mul(c, 1 - 0.3 * ss(0.6, 1, j / h));
   });
   TX.flagMe = flagTex([92, 128, 120], 1);
+  TX.flagEnemy = flagTex([170, 46, 38], 2);
+  TX.tarSide = genTex(256, 64, (i, j, _w, h) => {
+    let c = wcol([44, 37, 34], i, j, 1 - j / h, { seed: 15, rust: 0.12, fade: 0.06 });
+    if (j < 22) c = mixc(c, ALGAE, 0.7);
+    return c;
+  }, null, { repeat: [0.1, 1 / 1.2], offset: [0, 0.2 / 1.2] });
+  TX.tarDeck = genTex(128, 128, (i, j) => { let c: RGB = mul([62, 52, 44], 0.75 + 0.4 * fbm(i * 0.4, j * 0.02, 3)); if (i % 21 < 2) c = [26, 20, 16]; return wcol(c, i, j, 0.5, { seed: 18, rust: 0.05, fade: 0.08, grime: 0.2 }); }, null, { repeat: [0.12, 0.12] });
+  TX.teeth = genTex(256, 64, (i, j, _w, h) => wcol([44, 37, 34], i, j, j / h, { seed: 19, rust: 0.1, fade: 0.05 }), (x, w, h) => {
+    x.globalAlpha = 0.9; x.fillStyle = '#a8322a';
+    x.beginPath(); x.moveTo(0, 0); x.lineTo(w, 0); x.lineTo(w, h * 0.32);
+    for (let k = 10; k >= 0; k--) x.lineTo((k * w) / 10, h * (k % 2 ? 0.78 : 0.32));
+    x.fill();
+    x.fillStyle = '#e4dfcf';
+    for (let k = 0; k < 10; k++) { x.beginPath(); x.moveTo((k * w) / 10 + 3, h * 0.33); x.lineTo((k * w) / 10 + w / 20, h * 0.7); x.lineTo(((k + 1) * w) / 10 - 3, h * 0.33); x.fill(); }
+  });
   TX.ruin = genTex(128, 128, (i, j) => {
     let c = mixc([118, 116, 108], [84, 82, 76], fbm(i * 0.04, j * 0.04, 3));
     const fi = i % 32, fj = j % 32;

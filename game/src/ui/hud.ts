@@ -10,11 +10,16 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, parent: 
   return e;
 };
 
-export interface Marker { pos: THREE.Vector3; kind: 'spot' | 'dock'; label?: string }
+export interface Marker { pos: THREE.Vector3; kind: 'spot' | 'dock' | 'enemy'; label?: string }
 
 export class Hud {
   root: HTMLElement;
   private fuelFill: HTMLElement;
+  private hullFill: HTMLElement;
+  private hullBox: HTMLElement;
+  private flashEl: HTMLElement;
+  private bars: HTMLElement;
+  private barPool: HTMLElement[] = [];
   private fuelBox: HTMLElement;
   private valueEl: HTMLElement;
   private loadEl: HTMLElement;
@@ -31,7 +36,11 @@ export class Hud {
 
   constructor(parent: HTMLElement) {
     this.root = el('div', 'hud', parent);
+    this.flashEl = el('div', 'hit-flash', this.root);
+    this.bars = el('div', 'enemy-bars', this.root);
     const panel = el('div', 'hud-panel', this.root);
+    this.hullBox = el('div', 'hud-row', panel, `<span>${t('hull')}</span>`);
+    this.hullFill = el('i', '', el('div', 'hud-bar hull', this.hullBox));
     this.fuelBox = el('div', 'hud-row', panel, `<span>${t('fuel')}</span>`);
     const bar = el('div', 'hud-bar', this.fuelBox);
     this.fuelFill = el('i', '', bar);
@@ -58,6 +67,34 @@ export class Hud {
     this.spotsEl.textContent = `${t('salvageLeft')} ${spotsLeft}`;
     this.badge.textContent = pending > 0 ? String(pending) : '';
     this.badge.style.display = pending > 0 ? '' : 'none';
+  }
+
+  setHull(k: number) {
+    this.hullFill.style.width = `${Math.max(0, k) * 100}%`;
+    this.hullBox.classList.toggle('low', k < 0.3);
+  }
+
+  /** Red edge flash on the side of the screen the hit came from. */
+  flash(dx: number, dy: number) {
+    const a = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+    this.flashEl.style.background = `linear-gradient(${a + 180}deg, rgba(181,48,42,.55), rgba(181,48,42,0) 40%)`;
+    this.flashEl.classList.remove('on');
+    void this.flashEl.offsetWidth;
+    this.flashEl.classList.add('on');
+  }
+
+  /** Health bars over enemies that have been hit or are close. */
+  setEnemyBars(list: { x: number; y: number; k: number; hot: boolean }[]) {
+    list.forEach((b, i) => {
+      let e = this.barPool[i];
+      if (!e) { e = el('div', 'ebar', this.bars, '<i></i>'); this.barPool.push(e); }
+      e.style.display = '';
+      e.style.left = `${b.x}px`;
+      e.style.top = `${b.y}px`;
+      (e.firstChild as HTMLElement).style.width = `${b.k * 100}%`;
+      e.classList.toggle('hot', b.hot);
+    });
+    for (let i = list.length; i < this.barPool.length; i++) this.barPool[i].style.display = 'none';
   }
 
   /** p in screen px; progress 0..1, or null to hide. */

@@ -14,13 +14,17 @@ import { Input } from './ui/input';
 import { Hud, Marker } from './ui/hud';
 import { Panel } from './ui/panel';
 import { mulberry32 } from './core/noise';
+import { Combat, PLAYER_HULL } from './combat/combat';
+import { Enemy } from './combat/enemies';
+import { sideOf, Placed } from './inventory/modules';
+import { StrKey } from './i18n/zh';
 import { view } from './core/view';
 
 const SALVAGE_TIME = 2.5, SALVAGE_RADIUS = 9.5, SALVAGE_MAX_SPEED = 3.5;
 const EXTRACT_TIME = 3, EXTRACT_MAX_SPEED = 6, DRIFT_LOSE_TIME = 4;
 const TRAIL_EVERY = 0.2;
 
-export interface RunEnd { win: boolean; kept: Item[]; lost: number }
+export interface RunEnd { win: boolean; reason: 'win' | 'fuel' | 'sunk'; kept: Item[]; lost: number }
 
 export class Game {
   renderer: THREE.WebGLRenderer;
@@ -47,6 +51,11 @@ export class Game {
   trail: { x: number; z: number; born: number; k: number }[] = [];
   trailT = 0;
   camLook = new THREE.Vector3();
+  combat: Combat;
+  layout!: Layout;
+  hull = PLAYER_HULL;
+  hullMax = PLAYER_HULL;
+  shake = 0;
   private last = 0;
 
   constructor(canvas: HTMLCanvasElement, ui: HTMLElement) {
@@ -70,6 +79,12 @@ export class Game {
     this.panel.onClose = () => this.input.reset();
     this.hud.btnOrganize.addEventListener('click', () => this.togglePanel());
     this.hold.onChange(() => this.syncCargo());
+    this.combat = new Combat({
+      hitPlayer: (d, x, z, c) => this.hitPlayer(d, x, z, c),
+      steal: (side) => this.stealFrom(side),
+      onKill: (e) => this.onKill(e),
+      toast: (m, secs) => this.hud.toast(m, secs),
+    });
     this.hud.show(false);
 
     window.addEventListener('resize', () => this.resize());
@@ -110,6 +125,10 @@ export class Game {
     const fuel = layout.fuelMax();
     this.s = { x: 0, z: -22, yaw: 0, yawRate: 0, speed: 0, throttle: 0, fuel, fuelMax: fuel, bump: 9 };
     this.hold.setup(layout.cargoBoxes());
+    this.layout = layout;
+    this.hull = this.hullMax = PLAYER_HULL;
+    this.shake = 0;
+    this.combat.reset(this.level, layout, play ? map.enemies : { rammer: 0, harpoon: 0, gunboat: 0 }, this.world.radius, this.world.dock, this.world.roofs, this.rand);
     this.hasLeftDock = false;
     this.extractT = 0;
     this.driftT = 0;
@@ -130,6 +149,67 @@ export class Game {
     this.level.add(this.boat.group);
     this.hold.setup(layout.cargoBoxes());
     this.s.fuelMax = this.s.fuel = layout.fuelMax();
+    this.layout = layout;
+    this.combat.reset(this.level, layout, { rammer: 0, harpoon: 0, gunboat: 0 }, this.world.radius, this.world.dock, this.world.roofs, this.rand);
+  }
+
+  // ---------------------------------------------------------------- taking hits
+  /** Which part of the boat a world point is on: -1 port, 1 starboard, 0 bow, 2 stern. */
+  private sideAt(x: number, z: number) {
+    const dx = x - this.s.x, dz = z - this.s.z, c = Math.cos(this.s.yaw), sn = Math.sin(this.s.yaw);
+    const lx = c * dx - sn * dz, lz = sn * dx + c * dz;
+    if (lz < -12) return 0;
+    if (lz > 11) return 2;
+    return lx < 0 ? -1 : 1;
+  }
+  private modulesOn(part: number): Placed[] {
+    return this.layout.placed.filter((p) => p.type !== 'safe' && (part === 0 ? p.r <= 1 && sideOf(p) === 0 : part === 2 ? p.r >= 4 : sideOf(p) === part));
+  }
+  private hitPlayer(dmg: number, x: number, z: number, cause: string) {
+    if (this.state !== 'play') return;
+    const part = this.sideAt(x, z);
+    const armour = this.layout.placed.some((p) => p.type === 'armor' && (part === 0 || part === 2 ? false : sideOf(p) === part) && !this.combat.isDisabled(p.uid));
+    if (armour) dmg *= 0.5;
+    this.hull = Math.max(0, this.hull - dmg);
+    this.shake = Math.min(1, this.shake + dmg / 25);
+    const scr = new THREE.Vector3(x, 1, z).project(this.camera);
+    this.hud.flash(scr.x, -scr.y);
+    const msgs: string[] = [];
+    if (armour && cause !== 'harpoon') msgs.push(t('armorBlock'));
+    // a hit can knock out a module on that side ...
+    const mods = this.modulesOn(part);
+    if (mods.length && this.rand() < (cause === 'harpoon' ? 0.15 : 0.4)) {
+      const m = mods[Math.floor(this.rand() * mods.length)];
+      if (m.type === 'fuel') { this.s.fuel = Math.max(0, this.s.fuel - 12); msgs.push(t('fuelLeak')); }
+      else if (m.type !== 'cargo') { this.combat.disable(m, 8); msgs.push(`${t(`mod_${m.type}` as StrKey)}${t('moduleHit')}`); }
+    }
+    // ... or throw cargo from a box on that side overboard, where it floats and can be fished back out
+    const boxes = this.hold.containers.filter((c) => !c.safe && (part === 0 || part === 2 || c.side === part || c.side === 0));
+    if (boxes.length && this.rand() < (cause === 'ram' ? 0.6 : 0.3)) {
+      const pool = this.hold.items.filter((it) => boxes.some((b) => b.id === it.where));
+      if (pool.length) {
+        const it = pool[Math.floor(this.rand() * pool.length)];
+        this.hold.discard(it);
+        const ox = x - this.s.x, oz = z - this.s.z, ol = Math.hypot(ox, oz) || 1;
+        this.world.addSpot(x + ox / ol * 8, z + oz / ol * 8, 0, [it.def]);
+        msgs.push(`${itemName(it.def.kind)}${t('cargoLost')}`);
+      }
+    }
+    if (msgs.length) this.hud.toast(msgs.join(' · '), 2.6);
+    if (this.hull <= 0) this.finish(false, 'sunk');
+  }
+  private stealFrom(side: number): string | null {
+    const boxes = this.hold.containers.filter((c) => !c.safe);
+    const pref = this.hold.items.filter((it) => boxes.some((b) => b.id === it.where && (b.side === side || b.side === 0)));
+    const pool = pref.length ? pref : [...this.hold.items.filter((it) => boxes.some((b) => b.id === it.where)), ...this.hold.pile()];
+    if (!pool.length) return null;
+    const it = pool[Math.floor(this.rand() * pool.length)];
+    this.hold.discard(it);
+    return itemName(it.def.kind);
+  }
+  private onKill(e: Enemy) {
+    this.hud.toast(`${t('killed')}${t(`enemy_${e.kind}` as StrKey)}`);
+    this.world.addSpot(e.s.x, e.s.z, 0.75 + this.rand() * 0.25);
   }
 
   /** Cargo boxes look fuller as they fill. */
@@ -143,7 +223,7 @@ export class Game {
     });
   }
 
-  private finish(win: boolean) {
+  private finish(win: boolean, reason: RunEnd['reason'] = win ? 'win' : 'fuel') {
     this.state = 'over';
     if (this.panel.isOpen) { this.hold.pending().forEach((i) => this.hold.discard(i)); this.panel.close(); }
     const before = this.hold.items.length;
@@ -153,7 +233,7 @@ export class Game {
     this.hud.setSalvage(null, 0, '');
     setTimeout(() => {
       this.hud.show(false);
-      this.onRunEnd?.({ win, kept, lost: before - kept.length });
+      this.onRunEnd?.({ win, reason, kept, lost: before - kept.length });
     }, win ? 600 : 1400);
   }
 
@@ -163,8 +243,8 @@ export class Game {
     const n = 1 + (this.rand() < 0.3 + sp.richness * 0.35 ? 1 : 0);
     const got: string[] = [];
     let toPile = false;
-    for (let k = 0; k < n; k++) {
-      const def = rollItem(this.rand, sp.richness);
+    const defs = sp.fixed ?? Array.from({ length: n }, () => rollItem(this.rand, sp.richness));
+    for (const def of defs) {
       const it = this.hold.add(def);
       if (it.where === 'pile') toPile = true;
       got.push(itemName(def.kind));
@@ -184,7 +264,9 @@ export class Game {
     this.input.enabled = playing && !this.panel.isOpen;
     this.input.update();
     const weight = this.hold.weight();
-    if (playing) stepBoat(s, this.input.x, this.input.z, weight, sdt, this.world.roofs);
+    const engine = this.layout.placed.find((p) => p.type === 'engine');
+    const engineDown = !!engine && this.combat.isDisabled(engine.uid);
+    if (playing) stepBoat(s, this.input.x, this.input.z, weight, sdt, this.world.roofs, { maxSpeed: engineDown ? 8 : undefined });
     else { s.speed *= 0.97; s.throttle = 0; s.yawRate *= 0.95; }
     const { fx, fz } = forward(s);
     const cap = speedCap(weight);
@@ -225,7 +307,7 @@ export class Game {
       if (s.fuel <= 0 && this.extractT === 0) {
         if (this.driftT === 0) this.hud.toast(t('drifting'), 3);
         this.driftT += sdt;
-        if (this.driftT > DRIFT_LOSE_TIME && s.speed < 0.5) this.finish(false);
+        if (this.driftT > DRIFT_LOSE_TIME && s.speed < 0.5) this.finish(false, 'fuel');
       }
     }
 
@@ -241,6 +323,7 @@ export class Game {
     for (let i = 0; i < fp.count; i++) { const x = fl.base[i * 3]; fp.setZ(i, Math.sin(x * 2.2 - this.T * 7) * 0.22 * (x / fl.w)); }
     fp.needsUpdate = true;
     g.updateMatrixWorld();
+    this.combat.update(sdt, this.T, s, g, this.world.roofs, !playing);
     const ex = g.localToWorld(this.boat.exhaust.clone());
     this.smoke.forEach((m, i) => {
       const k = ((this.T / 2.6) + i / this.smoke.length) % 1;
@@ -262,10 +345,12 @@ export class Game {
     this.water.update(this.T, this.camLook, { x: s.x, z: s.z, fx, fz, speed01 }, this.trail);
 
     // camera: north-up, a little ahead of the boat
-    const dist = 62, phi = 0.74;
+    const dist = 96, phi = 0.8;
     const look = new THREE.Vector3(s.x + fx * s.speed * 0.9, 0, s.z + fz * s.speed * 0.9 - 3);
     this.camLook.lerp(look, Math.min(1, dt * 3));
     this.camera.position.set(this.camLook.x, Math.cos(phi) * dist, this.camLook.z + Math.sin(phi) * dist);
+    this.shake = Math.max(0, this.shake - dt * 2.5);
+    if (this.shake > 0) this.camera.position.add(new THREE.Vector3((Math.random() - 0.5), (Math.random() - 0.5), (Math.random() - 0.5)).multiplyScalar(this.shake * 2.2));
     this.camera.lookAt(this.camLook);
 
     if (playing) {
@@ -274,7 +359,17 @@ export class Game {
         .map((p) => ({ p, d: Math.hypot(p.x - s.x, p.z - s.z) }))
         .sort((a, b) => a.d - b.d).slice(0, 3)
         .forEach(({ p, d }) => markers.push({ pos: new THREE.Vector3(p.x, 2, p.z), kind: 'spot', label: `${Math.round(d)}m` }));
+      for (const e of this.combat.enemies) if (e.state !== 'patrol' && e.state !== 'sinking') markers.push({ pos: new THREE.Vector3(e.s.x, 2, e.s.z), kind: 'enemy' });
       this.hud.setMarkers(markers, this.camera, view.w, view.h);
+      this.hud.setHull(this.hull / this.hullMax);
+      const bars: { x: number; y: number; k: number; hot: boolean }[] = [];
+      for (const e of this.combat.enemies) {
+        if (e.state === 'sinking' || (e.hp >= e.maxHp && e.state === 'patrol')) continue;
+        const q = new THREE.Vector3(e.s.x, 7, e.s.z).project(this.camera);
+        if (q.z > 1 || Math.abs(q.x) > 1 || Math.abs(q.y) > 1) continue;
+        bars.push({ x: (q.x * 0.5 + 0.5) * view.w, y: (-q.y * 0.5 + 0.5) * view.h, k: e.hp / e.maxHp, hot: e.hitFlash > 0 });
+      }
+      this.hud.setEnemyBars(bars);
       this.hud.setStats(s.fuel / s.fuelMax, this.hold.value(), weight, this.world.spots.filter((p) => !p.looted).length, this.hold.pending().length);
     }
     this.hud.tick(dt);
