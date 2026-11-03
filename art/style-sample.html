@@ -1,0 +1,847 @@
+<title>锈海画风样张</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* layout: one dark-sea column — live scene first, then the ship-grid plate beside its legend, then the style rules */
+:root {
+  --sea: #0e2c33;
+  --sea-2: #153f48;
+  --line: #2a5660;
+  --bone: #eadcbc;
+  --bone-dim: #b3a88f;
+  --rust: #d0612f;
+  --signal: #f2c230;
+  --f-display: 'ZCOOL XiaoWei', 'Songti SC', 'STSong', serif;
+  --f-body: -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+  --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  color-scheme: dark;
+}
+html { background: var(--sea); }
+body { background: var(--sea); color: var(--bone); font-family: var(--f-body); font-size: 15px; line-height: 1.7; }
+.wrap {
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+  display: grid; gap: 48px;
+}
+header { display: grid; gap: 10px; max-width: 46rem; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .12em; color: var(--bone-dim); text-transform: uppercase; }
+h1 { font-family: var(--f-display); font-weight: 400; font-size: clamp(40px, 7vw, 68px); line-height: 1.05; margin: 0; letter-spacing: .04em; text-wrap: balance; }
+h1 span { color: var(--rust); }
+h2 { font-family: var(--f-display); font-weight: 400; font-size: 28px; line-height: 1.2; margin: 0; letter-spacing: .03em; text-wrap: balance; }
+p { margin: 0; max-width: 40rem; color: var(--bone); }
+.lead { font-size: 16px; color: var(--bone-dim); }
+figure { margin: 0; display: grid; gap: 12px; }
+canvas { display: block; width: 100%; height: auto; max-width: 100%; border-radius: 4px; background: #163f47; }
+#scene { box-shadow: 0 18px 60px rgba(0, 0, 0, .45); }
+figcaption { font-size: 13px; color: var(--bone-dim); max-width: 46rem; }
+figcaption b { color: var(--bone); font-weight: 500; }
+section { display: grid; gap: 20px; }
+.plate { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 32px; align-items: start; }
+.plate > * { min-width: 0; }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; border-top: 1px solid var(--line); }
+.legend li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.legend .n { font-family: var(--f-mono); font-size: 12px; color: var(--sea); background: var(--bone); width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; transform: translateY(2px); }
+.legend .nm { color: var(--bone); }
+.legend .nm small { display: block; color: var(--bone-dim); font-size: 13px; line-height: 1.5; }
+.legend .sz { font-family: var(--f-mono); font-size: 12px; color: var(--bone-dim); font-variant-numeric: tabular-nums; }
+.legend li.safe .nm { color: var(--signal); }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.sw { display: grid; gap: 6px; font-size: 13px; }
+.sw i { display: block; height: 46px; border-radius: 3px; border: 1px solid rgba(234, 220, 188, .14); }
+.sw span { font-family: var(--f-mono); font-size: 11px; color: var(--bone-dim); }
+.rules { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px 28px; }
+.rules li { display: grid; gap: 4px; padding-top: 12px; border-top: 1px solid var(--line); }
+.rules b { font-family: var(--f-display); font-weight: 400; font-size: 19px; color: var(--bone); }
+.rules span { color: var(--bone-dim); font-size: 14px; }
+footer { font-size: 12px; color: var(--bone-dim); border-top: 1px solid var(--line); padding-top: 16px; }
+footer a { color: var(--bone); }
+a:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+@media (max-width: 760px) {
+  .plate { grid-template-columns: minmax(0, 1fr); }
+  #inv { max-width: 420px; margin: 0 auto; }
+}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">画风样张 · 第 1 版</div>
+    <h1>锈海<span>手绘</span></h1>
+    <p class="lead">世界被海淹没的第八十年。太阳很毒，海很空，船上每一样东西都是捡来焊上去的。这一页的画面全部由代码实时绘制，没有用一张图片。</p>
+  </header>
+
+  <figure>
+    <canvas id="scene" width="1200" height="780" aria-label="游戏画面样张：拼装船在淹没城市的楼顶之间航行，右上方一艘鱼叉艇正在瞄准"></canvas>
+    <figcaption><b>游戏内一帧。</b>中间是你的拼装船，右上方的红色小船是鱼叉艇，红色扇形是它的出手预警。左下是虚拟摇杆，右下是技能按钮。所有线条每秒重绘 12 次，模拟手绘动画里的“线条沸腾”。</figcaption>
+  </figure>
+
+  <section>
+    <h2>船就是背包</h2>
+    <p>同一条船的网格视图。模块和物品只画一次：网格里的样子就是它在甲板上的样子，位置一一对应。艏炮在船头所以只能朝前打，装甲只护住右舷。</p>
+    <div class="plate">
+      <canvas id="inv" width="440" height="520" aria-label="船体网格：3 列 6 行，摆放着 9 个模块和物品"></canvas>
+      <ol class="legend">
+        <li><span class="n">1</span><span class="nm">艏炮<small>只能朝船头方向开火，射程远</small></span><span class="sz">1×1</span></li>
+        <li><span class="n">2</span><span class="nm">左舷机枪<small>朝左侧扫射，炮管伸出船舷</small></span><span class="sz">1×2</span></li>
+        <li><span class="n">3</span><span class="nm">右舷装甲<small>只挡右侧来的伤害</small></span><span class="sz">1×2</span></li>
+        <li><span class="n">4</span><span class="nm">零件箱<small>普通战利品，能卖钱也能造模块</small></span><span class="sz">2×1</span></li>
+        <li><span class="n">5</span><span class="nm">旧世界电池<small>稀有战利品，带金色光晕</small></span><span class="sz">1×1</span></li>
+        <li><span class="n">6</span><span class="nm">油桶<small>续航来源，被打中会起火</small></span><span class="sz">1×1</span></li>
+        <li class="safe"><span class="n">7</span><span class="nm">安全箱<small>船沉了，里面的东西也保得住</small></span><span class="sz">1×1</span></li>
+        <li><span class="n">8</span><span class="nm">淡水桶<small>浮城里的硬通货</small></span><span class="sz">1×1</span></li>
+        <li><span class="n">9</span><span class="nm">舷外机<small>决定航速，船越重跑得越慢</small></span><span class="sz">3×1</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <h2>配色</h2>
+    <div class="swatches">
+      <div class="sw"><i style="background:#22170f"></i>墨线<span>#22170F</span></div>
+      <div class="sw"><i style="background:#1b5560"></i>深海<span>#1B5560</span></div>
+      <div class="sw"><i style="background:#5aa79c"></i>浅滩<span>#5AA79C</span></div>
+      <div class="sw"><i style="background:#e9efe2"></i>浪沫<span>#E9EFE2</span></div>
+      <div class="sw"><i style="background:#c4562a"></i>铁锈<span>#C4562A</span></div>
+      <div class="sw"><i style="background:#c29a68"></i>旧木<span>#C29A68</span></div>
+      <div class="sw"><i style="background:#aba395"></i>混凝土<span>#ABA395</span></div>
+      <div class="sw"><i style="background:#f2c230"></i>信号黄<span>#F2C230</span></div>
+      <div class="sw"><i style="background:#b5302a"></i>敌对红<span>#B5302A</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>画风规则</h2>
+    <ul class="rules">
+      <li><b>墨线不用纯黑</b><span>用深褐色墨水。粗细随笔压变化，两端收尖，闭合图形的接口处故意多画一点。</span></li>
+      <li><b>线条沸腾</b><span>每个画面准备 3 个微差版本，每秒切换 12 次，画面像在呼吸。静止的东西也是活的。</span></li>
+      <li><b>填色错位</b><span>色块和墨线故意错开 1–2 像素，像手工上色时没对齐。</span></li>
+      <li><b>纸纹叠加</b><span>全屏叠一层噪点纹理，用正片叠底，把所有元素统一成一种手作质感。</span></li>
+      <li><b>统一光源</b><span>光从左上方来，阴影一律投向右下。楼顶周围的浅色是淹在水下不深的楼体。</span></li>
+      <li><b>颜色有纪律</b><span>信号黄只给稀有物品和关键提示，红色只给敌人和危险，玩家一眼就能分清。</span></li>
+    </ul>
+  </section>
+
+  <footer>绘制方法参考 <a href="https://github.com/Vincentwei1021/mg-styles-15" target="_blank" rel="noopener">mg-styles-15</a>（MIT 许可）的逐帧手绘技法：变宽笔刷、线条沸腾、错位填色、纸纹叠加。画风和全部代码为本项目原创。</footer>
+</div>
+
+<script>
+(() => {
+'use strict';
+// ------------------------------------------------------------------ palette
+const PAL = {
+  ink: '#22170f', foam: '#e9efe2', shallow: '#5aa79c',
+  rust: '#c4562a', rustD: '#7f3419', wood: '#c29a68', woodD: '#8e6a40', woodL: '#d4b07a', bone: '#e6d6b2',
+  conc: '#aba395', concD: '#7b7468', steel: '#8d9894', steelD: '#5d6764', sig: '#f2c230',
+  red: '#b5302a', plant: '#6e8b47', water: '#6fa3b3', dark: '#3a3833', tar: '#4a352b',
+};
+const FD = "'ZCOOL XiaoWei', 'Songti SC', serif";
+const FM = "'IBM Plex Mono', ui-monospace, monospace";
+const W = 1200, H = 780;
+const DPR = Math.min(2, window.devicePixelRatio || 1);
+const REDUCE = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ------------------------------------------------------------------ math
+function hs(...a) {
+  let h = 2166136261 >>> 0;
+  for (const v of a) {
+    h = Math.imul(h ^ ((Math.round(v * 997) | 0) >>> 0), 16777619) >>> 0;
+    h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995) >>> 0; h ^= h >>> 15;
+  }
+  return (h >>> 0) / 4294967296;
+}
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const sstep = (a, b, x) => { const t = clamp((x - a) / ((b - a) || 1e-9)); return t * t * (3 - 2 * t); };
+function vn(x, y, z) {
+  const X = Math.floor(x), Y = Math.floor(y), Z = Math.floor(z);
+  const fx = x - X, fy = y - Y, fz = z - Z;
+  const u = fx * fx * (3 - 2 * fx), w = fy * fy * (3 - 2 * fy), q = fz * fz * (3 - 2 * fz);
+  const g = (i, j, k) => hs(X + i, Y + j, Z + k) * 2 - 1;
+  const a = lerp(lerp(g(0, 0, 0), g(1, 0, 0), u), lerp(g(0, 1, 0), g(1, 1, 0), u), w);
+  const b = lerp(lerp(g(0, 0, 1), g(1, 0, 1), u), lerp(g(0, 1, 1), g(1, 1, 1), u), w);
+  return lerp(a, b, q);
+}
+
+// ------------------------------------------------------------------ geometry
+function cr(p0, p1, p2, p3, t) {
+  const t2 = t * t, t3 = t2 * t;
+  const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+  return [f(p0[0], p1[0], p2[0], p3[0]), f(p0[1], p1[1], p2[1], p3[1])];
+}
+function spline(P, closed) {
+  const n = P.length, out = [];
+  if (n < 2) return P.map((p) => [p[0], p[1]]);
+  const segN = closed ? n : n - 1;
+  for (let i = 0; i < segN; i++) {
+    const p1 = P[i], p2 = P[(i + 1) % n];
+    const p0 = closed ? P[(i - 1 + n) % n] : P[Math.max(0, i - 1)];
+    const p3 = closed ? P[(i + 2) % n] : P[Math.min(n - 1, i + 2)];
+    const m = Math.max(1, Math.ceil(Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) / 4));
+    for (let k = 0; k < m; k++) out.push(cr(p0, p1, p2, p3, k / m));
+  }
+  if (!closed) out.push([P[n - 1][0], P[n - 1][1]]);
+  return out;
+}
+function lin(P, closed) {
+  const n = P.length, out = [];
+  const segN = closed ? n : n - 1;
+  for (let i = 0; i < segN; i++) {
+    const a = P[i], b = P[(i + 1) % n];
+    const m = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 4));
+    for (let k = 0; k < m; k++) out.push([lerp(a[0], b[0], k / m), lerp(a[1], b[1], k / m)]);
+  }
+  if (!closed) out.push([P[n - 1][0], P[n - 1][1]]);
+  return out;
+}
+function arclen(p) {
+  const L = [0];
+  for (let i = 1; i < p.length; i++) L.push(L[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+  return L;
+}
+function boil(p, seed, amp, sc) {
+  if (!amp) return p;
+  const z = seed * 2.371 + 0.5;
+  return p.map(([x, y]) => [x + amp * vn(x / sc, y / sc, z), y + amp * vn(x / sc + 41.3, y / sc - 17.9, z)]);
+}
+const rect = (x, y, w, h) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+function rrect(x, y, w, h, r) {
+  const out = [];
+  const corner = (cx, cy, a0) => { for (let k = 0; k <= 3; k++) { const a = a0 + (k / 3) * Math.PI / 2; out.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); } };
+  corner(x + w - r, y + r, -Math.PI / 2); corner(x + w - r, y + h - r, 0);
+  corner(x + r, y + h - r, Math.PI / 2); corner(x + r, y + r, Math.PI);
+  return out;
+}
+function circ(cx, cy, r, n) {
+  n = n || Math.max(8, Math.round((2 * Math.PI * r) / 7));
+  const out = [];
+  for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; out.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
+  return out;
+}
+const xf = (P, x, y, r = 0, s = 1) => { const c = Math.cos(r), sn = Math.sin(r); return P.map(([px, py]) => [x + (px * c - py * sn) * s, y + (px * sn + py * c) * s]); };
+
+// ------------------------------------------------------------------ brush
+let SV = 0;                        // current boil variant
+const REG = { dx: 0, dy: 0 };      // fill off-register for this variant
+const S = (k) => k * 7.13 + SV * 101.7;
+function setVariant(v) { SV = v; REG.dx = (hs(v, 11) - 0.5) * 3.4; REG.dy = (hs(v, 12) - 0.5) * 3.4; }
+
+function stroke(c, P, o = {}) {
+  const { w = 2.6, seed = 1, amp = 1.3, sc = 46, color = PAL.ink, closed = false, smooth = true, jit = 0.32, tin = 12, tout = 20, alpha = 1 } = o;
+  let p = smooth ? spline(P, closed) : lin(P, closed);
+  if (closed) {
+    const n = p.length, k = Math.floor(hs(seed, 3) * n);
+    p = [...p.slice(k), ...p.slice(0, k)];
+    const ext = Math.max(2, Math.floor(n * 0.06));
+    for (let i = 0; i < ext; i++) p.push(p[i]);
+  }
+  p = boil(p, seed, amp, sc);
+  const n = p.length;
+  if (n < 2) return;
+  const L = arclen(p), tot = L[n - 1] || 1;
+  const Lp = [], Rp = [];
+  for (let i = 0; i < n; i++) {
+    const a = p[Math.max(0, i - 1)], b = p[Math.min(n - 1, i + 1)];
+    let tx = b[0] - a[0], ty = b[1] - a[1];
+    const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
+    const s = L[i];
+    let k = 1 + jit * vn(s / 38, seed * 1.37, 3.1);
+    k *= 0.16 + 0.84 * Math.min(sstep(0, Math.min(tin, tot * 0.3), s), sstep(0, Math.min(tout, tot * 0.4), tot - s));
+    const hw = (w * k) / 2;
+    Lp.push([p[i][0] - ty * hw, p[i][1] + tx * hw]);
+    Rp.push([p[i][0] + ty * hw, p[i][1] - tx * hw]);
+  }
+  c.beginPath();
+  c.moveTo(Lp[0][0], Lp[0][1]);
+  for (let i = 1; i < n; i++) c.lineTo(Lp[i][0], Lp[i][1]);
+  for (let i = n - 1; i >= 0; i--) c.lineTo(Rp[i][0], Rp[i][1]);
+  c.closePath();
+  c.globalAlpha = alpha; c.fillStyle = color; c.fill(); c.globalAlpha = 1;
+}
+function fill(c, P, color, o = {}) {
+  const { seed = 1, amp = 1.3, sc = 46, dx = 0, dy = 0, smooth = false, alpha = 1 } = o;
+  let p = smooth ? spline(P, true) : lin(P, true);
+  p = boil(p, seed + 0.5, amp, sc);
+  c.beginPath();
+  p.forEach((q, i) => (i ? c.lineTo(q[0] + dx, q[1] + dy) : c.moveTo(q[0] + dx, q[1] + dy)));
+  c.closePath();
+  c.globalAlpha = alpha; c.fillStyle = color; c.fill(); c.globalAlpha = 1;
+}
+// off-register fill + hand-inked outline
+function shape(c, P, fillC, o = {}) {
+  if (fillC) fill(c, P, fillC, { ...o, alpha: o.falpha ?? 1, dx: REG.dx * (o.reg ?? 1), dy: REG.dy * (o.reg ?? 1) });
+  if (o.ink !== false) stroke(c, P, { ...o, closed: true, smooth: o.smooth ?? false, w: o.w ?? 2.4, color: o.inkC ?? PAL.ink, alpha: o.ialpha ?? 1 });
+}
+function hatch(c, P, o = {}) {
+  const { gap = 7, ang = -0.8, w = 1.1, color = PAL.ink, seed = 1, alpha = 0.45, amp = 0.7 } = o;
+  c.save();
+  c.beginPath(); lin(P, true).forEach((q, i) => (i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]))); c.closePath(); c.clip();
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of P) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+  const R = Math.hypot(x1 - x0, y1 - y0) / 2 + 6, mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+  const cs = Math.cos(ang), sn = Math.sin(ang);
+  let k = 0;
+  for (let d = -R; d <= R; d += gap, k++) {
+    const px = mx - sn * d, py = my + cs * d;
+    stroke(c, [[px - cs * R, py - sn * R], [px + cs * R, py + sn * R]], { w, seed: seed * 31 + k, amp, color, alpha, smooth: false, tin: 4, tout: 4, jit: 0.4 });
+  }
+  c.restore();
+}
+function dots(c, pts, r, color, seed) {
+  pts.forEach(([x, y], i) => fill(c, circ(x, y, r * (0.8 + 0.4 * hs(seed, i)), 6), color, { seed: seed + i, amp: 0.4, smooth: true }));
+}
+function layer(w, h, ox = 0, oy = 0) {
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(w * DPR); cv.height = Math.round(h * DPR);
+  const c = cv.getContext('2d');
+  c.setTransform(DPR, 0, 0, DPR, ox * DPR, oy * DPR);
+  c.lineJoin = 'round';
+  return c;
+}
+
+// ------------------------------------------------------------------ the player's boat
+const C = 40, GX = -60, GY = -110;
+const HULL = [[0, -205], [36, -172], [64, -128], [79, -80], [84, 0], [82, 90], [76, 140], [62, 160], [-62, 160], [-76, 140], [-82, 90], [-84, 0], [-79, -80], [-64, -128], [-36, -172]];
+const MODS = [
+  { id: 'cannon', c: 1, r: 0, w: 1, h: 1 },
+  { id: 'gun', c: 0, r: 1, w: 1, h: 2 },
+  { id: 'armor', c: 2, r: 1, w: 1, h: 2 },
+  { id: 'crate', c: 0, r: 3, w: 2, h: 1 },
+  { id: 'cell', c: 2, r: 3, w: 1, h: 1 },
+  { id: 'fuel', c: 0, r: 4, w: 1, h: 1 },
+  { id: 'safe', c: 1, r: 4, w: 1, h: 1 },
+  { id: 'water', c: 2, r: 4, w: 1, h: 1 },
+  { id: 'engine', c: 0, r: 5, w: 3, h: 1 },
+];
+const EMPTY = [[0, 0], [2, 0], [1, 1], [1, 2]];
+
+const DRAW = {
+  cannon(c, x, y, w, h, k) {
+    const cx = x + w / 2, cy = y + h / 2 + 3;
+    for (let i = 0; i < 7; i++) { // sandbag ring
+      const a = Math.PI * 0.15 + (i / 6) * Math.PI * 0.7 + Math.PI / 2 - Math.PI * 0.5;
+      const bx = cx + Math.cos(a + Math.PI * 0.25) * 15, by = cy + Math.sin(a + Math.PI * 0.25) * 15;
+      shape(c, circ(bx, by, 5.5, 8), '#b9a57e', { seed: S(k * 50 + i), w: 1.3, smooth: true, amp: 0.8 });
+    }
+    shape(c, circ(cx, cy, 11, 12), PAL.steel, { seed: S(k * 50 + 9), w: 2.2, smooth: true });
+    shape(c, rect(cx - 3.6, cy - 36, 7.2, 30), PAL.steelD, { seed: S(k * 50 + 10), w: 1.8 });
+    shape(c, rect(cx - 5, cy - 40, 10, 6), PAL.dark, { seed: S(k * 50 + 11), w: 1.6 });
+    stroke(c, [[cx - 5, cy + 1], [cx + 5, cy + 1]], { w: 1.2, seed: S(k * 50 + 12), alpha: 0.7 });
+  },
+  gun(c, x, y, w, h, k) {
+    const cy = y + h / 2;
+    shape(c, rrect(x + 6, y + 8, w - 12, h - 16, 4), PAL.rust, { seed: S(k * 50 + 1), w: 2 });
+    hatch(c, rrect(x + 6, y + 8, w - 12, h - 16, 4), { seed: S(k * 50 + 2), gap: 6, alpha: 0.3, ang: -0.7 });
+    shape(c, rect(x - 26, cy - 3.2, 38, 6.4), PAL.steelD, { seed: S(k * 50 + 3), w: 1.8 });
+    shape(c, rect(x - 30, cy - 4.5, 7, 9), PAL.dark, { seed: S(k * 50 + 4), w: 1.4 });
+    shape(c, circ(x + w / 2, cy, 9, 10), PAL.steel, { seed: S(k * 50 + 5), w: 2, smooth: true });
+    for (let i = 0; i < 3; i++) shape(c, rect(x + 11 + i * 6.5, y + h - 22, 5.5, 9), '#6b6a3f', { seed: S(k * 50 + 6 + i), w: 1.1 });
+  },
+  armor(c, x, y, w, h, k) {
+    const P = rect(x + 4, y + 3, w - 8, h - 6);
+    shape(c, P, PAL.steel, { seed: S(k * 50 + 1), w: 2.4 });
+    hatch(c, rect(x + w - 15, y + 3, 11, h - 6), { seed: S(k * 50 + 2), gap: 5, alpha: 0.4 });
+    stroke(c, [[x + 6, y + h / 2], [x + w - 6, y + h / 2 + 1]], { w: 1.4, seed: S(k * 50 + 3), smooth: false });
+    const rv = [];
+    for (let j = 0; j < 4; j++) { rv.push([x + 10, y + 12 + j * 19]); rv.push([x + w - 10, y + 12 + j * 19]); }
+    dots(c, rv, 1.8, PAL.ink, S(k * 50 + 4));
+    [[x + 10, y + 13], [x + w - 10, y + 50]].forEach(([sx, sy], i) => stroke(c, [[sx, sy + 3], [sx + 1, sy + 13], [sx - 1, sy + 20]], { w: 2.2, color: PAL.rust, seed: S(k * 50 + 5 + i), alpha: 0.85, tin: 2 }));
+  },
+  crate(c, x, y, w, h, k) {
+    const P = rect(x + 4, y + 5, w - 8, h - 10);
+    shape(c, P, PAL.woodL, { seed: S(k * 50 + 1), w: 2.2 });
+    for (let i = 1; i < 3; i++) stroke(c, [[x + 6, y + 5 + i * (h - 10) / 3], [x + w - 6, y + 5 + i * (h - 10) / 3]], { w: 1.2, seed: S(k * 50 + 2 + i), color: PAL.woodD, smooth: false });
+    stroke(c, [[x + 8, y + 9], [x + w - 8, y + h - 9]], { w: 1.8, seed: S(k * 50 + 5), smooth: false });
+    c.save(); c.globalAlpha = 0.75; c.fillStyle = PAL.ink; c.font = `15px ${FD}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('零件', x + w / 2 + REG.dx * 0.3, y + h / 2 + 1); c.restore();
+  },
+  cell(c, x, y, w, h, k) {
+    const cx = x + w / 2, cy = y + h / 2;
+    const g = c.createRadialGradient(cx, cy, 4, cx, cy, 30);
+    g.addColorStop(0, 'rgba(242,194,48,0.75)'); g.addColorStop(1, 'rgba(242,194,48,0)');
+    c.fillStyle = g; c.fillRect(cx - 32, cy - 32, 64, 64);
+    shape(c, rrect(x + 10, y + 9, w - 20, h - 16, 4), '#2c3236', { seed: S(k * 50 + 1), w: 2 });
+    shape(c, rect(cx - 5, y + 5, 10, 5), PAL.steel, { seed: S(k * 50 + 2), w: 1.3 });
+    shape(c, [[cx + 2, cy - 10], [cx - 6, cy + 2], [cx - 0.5, cy + 2], [cx - 3, cy + 11], [cx + 6, cy - 2], [cx + 0.5, cy - 2]], PAL.sig, { seed: S(k * 50 + 3), w: 1.2, amp: 0.6 });
+  },
+  fuel(c, x, y, w, h, k) {
+    const cx = x + w / 2, cy = y + h / 2;
+    shape(c, circ(cx, cy, 15, 14), '#a8402a', { seed: S(k * 50 + 1), w: 2.2, smooth: true });
+    stroke(c, circ(cx, cy, 10.5, 12), { closed: true, w: 1.2, seed: S(k * 50 + 2), alpha: 0.7 });
+    shape(c, circ(cx + 5, cy - 5, 3, 6), PAL.steel, { seed: S(k * 50 + 3), w: 1, smooth: true });
+    shape(c, circ(cx - 6, cy + 4, 2, 6), PAL.steel, { seed: S(k * 50 + 4), w: 0.9, smooth: true });
+  },
+  safe(c, x, y, w, h, k) {
+    const P = rect(x + 5, y + 5, w - 10, h - 10);
+    fill(c, P, PAL.sig, { seed: S(k * 50 + 1), dx: REG.dx, dy: REG.dy });
+    c.save(); c.beginPath(); lin(P, true).forEach((q, i) => (i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]))); c.closePath(); c.clip();
+    for (let i = -4; i < 6; i++) stroke(c, [[x + i * 9, y + h + 4], [x + i * 9 + 30, y - 4]], { w: 3.6, seed: S(k * 50 + 10 + i), smooth: false, tin: 2, tout: 2 });
+    c.restore();
+    shape(c, rect(x + 10, y + 10, w - 20, h - 20), '#7f9298', { seed: S(k * 50 + 2), w: 1.6 });
+    shape(c, circ(x + w / 2, y + h / 2, 6.5, 10), PAL.bone, { seed: S(k * 50 + 3), w: 1.5, smooth: true });
+    stroke(c, [[x + w / 2, y + h / 2], [x + w / 2 + 3, y + h / 2 - 4]], { w: 1.4, seed: S(k * 50 + 4), tin: 1, tout: 2 });
+    stroke(c, P, { closed: true, w: 2.4, seed: S(k * 50 + 5), smooth: false });
+  },
+  water(c, x, y, w, h, k) {
+    shape(c, rrect(x + 9, y + 9, w - 18, h - 16, 6), PAL.water, { seed: S(k * 50 + 1), w: 2 });
+    shape(c, circ(x + w / 2, y + 9, 4, 7), '#3f6f84', { seed: S(k * 50 + 2), w: 1.2, smooth: true });
+    stroke(c, [[x + 14, y + 16], [x + 14, y + h - 12]], { w: 2, color: '#d9eef2', seed: S(k * 50 + 3), alpha: 0.85 });
+  },
+  engine(c, x, y, w, h, k) {
+    [x + w * 0.3, x + w * 0.7].forEach((px, i) => {
+      shape(c, rect(px - 3, y + h - 4, 6, 36), PAL.steelD, { seed: S(k * 50 + 20 + i), w: 1.4 });
+      fill(c, circ(px, y + h + 34, 11, 12), 'rgba(141,152,148,0.5)', { seed: S(k * 50 + 22 + i), smooth: true });
+      for (let b = 0; b < 3; b++) {
+        const a = b * 2.09 + SV * 0.9 + i;
+        stroke(c, [[px, y + h + 34], [px + Math.cos(a) * 11, y + h + 34 + Math.sin(a) * 11]], { w: 2.6, seed: S(k * 50 + 24 + b + i * 3), tin: 2, tout: 6 });
+      }
+    });
+    const P = rrect(x + 8, y + 4, w - 16, h - 8, 6);
+    shape(c, P, PAL.dark, { seed: S(k * 50 + 1), w: 2.4 });
+    for (let i = 0; i < 6; i++) stroke(c, [[x + 22 + i * 7, y + 12], [x + 22 + i * 7, y + h - 12]], { w: 1.4, color: '#6f6b60', seed: S(k * 50 + 2 + i), smooth: false });
+    shape(c, rect(x + w - 44, y + 12, 26, 16), PAL.rust, { seed: S(k * 50 + 9), w: 1.4 });
+    shape(c, circ(x + w - 31, y + 20, 3.4, 6), PAL.dark, { seed: S(k * 50 + 10), w: 1, smooth: true });
+  },
+};
+
+function drawBoat(c, mode) {
+  const inv = mode === 'inv';
+  // cast shadow on the water
+  fill(c, xf(HULL, 7, 10), 'rgba(4,22,28,0.38)', { seed: S(1), amp: 2 });
+  // tyre fenders
+  [[-1, -40], [-1, 40], [-1, 112], [1, -40], [1, 40], [1, 112]].forEach(([sg, fy], i) => {
+    const fx = sg * (fy > 100 ? 80 : 86);
+    shape(c, circ(fx, fy, 10, 10), '#2b2a27', { seed: S(10 + i), w: 1.8, smooth: true });
+    stroke(c, circ(fx, fy, 4.5, 8), { closed: true, w: 1.1, color: '#6f6b60', seed: S(16 + i) });
+  });
+  shape(c, HULL, PAL.wood, { seed: S(2), w: 4.4, amp: 1.6, smooth: false });
+  // planks (clipped to hull)
+  c.save(); c.beginPath(); HULL.forEach((p, i) => (i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]))); c.closePath(); c.clip();
+  for (let i = -3; i <= 3; i++) stroke(c, [[i * 21 + 3, -215], [i * 21, 0], [i * 21 + 2, 170]], { w: 1.3, color: PAL.woodD, seed: S(30 + i), alpha: 0.6 });
+  hatch(c, [[40, -220], [100, -220], [100, 170], [40, 170]], { seed: S(40), gap: 6, alpha: 0.18 });
+  c.restore();
+  // inner gunwale
+  stroke(c, HULL.map(([x, y]) => [x * 0.88, y * 0.94 + 6]), { closed: true, w: 1.5, seed: S(3), alpha: 0.55 });
+  // riveted scrap patches
+  const P1 = [[-30, -158], [10, -168], [24, -138], [-16, -128]];
+  shape(c, P1, PAL.rust, { seed: S(4), w: 1.7 });
+  dots(c, [[-24, -152], [6, -160], [18, -140], [-12, -134]], 1.5, PAL.ink, S(5));
+  const P2 = [[-80, 128], [-46, 122], [-44, 150], [-72, 154]];
+  shape(c, P2, '#7d8682', { seed: S(6), w: 1.7 });
+  dots(c, [[-74, 132], [-50, 128], [-49, 146], [-68, 149]], 1.5, PAL.ink, S(7));
+  // deck grid
+  const gc = inv ? 'rgba(240,228,200,0.85)' : 'rgba(240,228,200,0.30)';
+  const gw = inv ? 1.6 : 1.1;
+  for (let i = 0; i <= 3; i++) stroke(c, [[GX + i * C, GY], [GX + i * C, GY + 6 * C]], { w: gw, color: gc, seed: S(60 + i), smooth: false, tin: 4, tout: 4, jit: 0.2 });
+  for (let j = 0; j <= 6; j++) stroke(c, [[GX, GY + j * C], [GX + 3 * C, GY + j * C]], { w: gw, color: gc, seed: S(70 + j), smooth: false, tin: 4, tout: 4, jit: 0.2 });
+  if (inv) {
+    EMPTY.forEach(([ec, er], i) => {
+      const x = GX + ec * C, y = GY + er * C;
+      hatch(c, rect(x + 3, y + 3, C - 6, C - 6), { seed: S(80 + i), gap: 6, color: PAL.bone, alpha: 0.22, ang: 0.8 });
+    });
+  }
+  MODS.forEach((m, k) => DRAW[m.id](c, GX + m.c * C, GY + m.r * C, m.w * C, m.h * C, k + 1));
+  if (inv) {
+    MODS.forEach((m, k) => {
+      const x = GX + m.c * C + 2, y = GY + m.r * C + 2;
+      shape(c, circ(x + 7, y + 7, 7.5, 10), m.id === 'safe' ? PAL.ink : PAL.bone, { seed: S(90 + k), w: 1.2, smooth: true, amp: 0.5 });
+      c.save(); c.fillStyle = m.id === 'safe' ? PAL.sig : PAL.ink; c.font = `500 10px ${FM}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(String(k + 1), x + 7, y + 7.5); c.restore();
+    });
+  }
+}
+
+// ------------------------------------------------------------------ enemy harpoon skiff
+const EHULL = [[0, -190], [40, -140], [62, -60], [64, 40], [56, 120], [-56, 120], [-64, 40], [-62, -60], [-40, -140]];
+function drawEnemy(c) {
+  fill(c, xf(EHULL, 7, 10), 'rgba(4,22,28,0.38)', { seed: S(201), amp: 2 });
+  // ram spikes
+  for (let i = 0; i < 5; i++) {
+    const t = i / 4, y = lerp(-120, 80, t);
+    [-1, 1].forEach((sg) => stroke(c, [[sg * 58, y], [sg * 78, y - 8]], { w: 3.4, seed: S(210 + i + (sg > 0 ? 9 : 0)), tin: 2, tout: 10 }));
+  }
+  shape(c, EHULL, PAL.tar, { seed: S(202), w: 5, amp: 1.8, smooth: false });
+  stroke(c, EHULL.map(([x, y]) => [x * 0.84, y * 0.9 + 4]), { closed: true, w: 4, color: PAL.red, seed: S(203), smooth: false });
+  c.save(); c.beginPath(); EHULL.forEach((p, i) => (i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]))); c.closePath(); c.clip();
+  for (let i = -2; i <= 2; i++) stroke(c, [[i * 22, -200], [i * 22 + 2, 130]], { w: 1.6, color: '#2a1e18', seed: S(220 + i), alpha: 0.8 });
+  c.restore();
+  // harpoon launcher
+  shape(c, rect(-3.5, -232, 7, 112), PAL.steel, { seed: S(230), w: 2.4 });
+  shape(c, [[0, -262], [11, -236], [3, -240], [3, -228], [-3, -228], [-3, -240], [-11, -236]], PAL.bone, { seed: S(231), w: 2.2, amp: 0.8 });
+  shape(c, circ(0, -112, 18, 14), PAL.steelD, { seed: S(232), w: 2.6, smooth: true });
+  for (let i = 0; i < 3; i++) stroke(c, circ(0, -60, 18 - i * 5, 14), { closed: true, w: 2.2, color: PAL.bone, seed: S(233 + i) });
+  shape(c, rect(-44, -20, 38, 34), '#6a4a30', { seed: S(240), w: 2.4 });
+  shape(c, rect(6, 6, 38, 34), '#6a4a30', { seed: S(241), w: 2.4 });
+  stroke(c, [[-42, -18], [-8, 12]], { w: 2, seed: S(242), smooth: false });
+  shape(c, rrect(-34, 72, 68, 34, 6), PAL.dark, { seed: S(243), w: 2.6 });
+  shape(c, [[-52, -40], [-52, -82], [-20, -70]], PAL.red, { seed: S(244), w: 2.2, amp: 1 });
+}
+
+// ------------------------------------------------------------------ the world
+const ROOFS = [
+  { id: 1, x: 235, y: 240, w: 230, h: 150, r: 0.06, type: 'tank' },
+  { id: 2, x: 1010, y: 560, w: 170, h: 170, r: -0.1, type: 'pad' },
+  { id: 3, x: 800, y: 115, w: 104, h: 84, r: 0.32, type: 'stair' },
+];
+const PB = { x: 560, y: 470, r: 0.42 };
+const EB = { x: 935, y: 300, s: 0.62 };
+EB.r = Math.atan2(PB.x - EB.x, -(PB.y - EB.y));
+
+function roofStatic(c, b) {
+  const hw = b.w / 2, hh = b.h / 2, k = b.id * 100;
+  c.save(); c.translate(b.x, b.y); c.rotate(b.r);
+  fill(c, rect(-hw - 30, -hh - 30, b.w + 60, b.h + 60), 'rgba(62,140,136,0.42)', { seed: S(k + 1), amp: 5, sc: 36 });
+  fill(c, rect(-hw - 14, -hh - 14, b.w + 28, b.h + 28), 'rgba(98,178,165,0.55)', { seed: S(k + 2), amp: 3.5, sc: 36 });
+  for (let i = 0; i < 7; i++) {
+    const a = hs(b.id, i) * Math.PI * 2, rr = Math.max(hw, hh) + 20;
+    const px = clamp(Math.cos(a) * rr, -hw - 22, hw + 22), py = clamp(Math.sin(a) * rr, -hh - 22, hh + 22);
+    stroke(c, [[px - 9, py], [px - 3, py - 3], [px + 4, py + 1], [px + 10, py - 2]], { w: 1.4, color: '#d5efe4', alpha: 0.35, seed: S(k + 10 + i) });
+  }
+  fill(c, rect(-hw + 10, -hh + 13, b.w, b.h), 'rgba(8,36,42,0.5)', { seed: S(k + 3), amp: 1.5 });
+  shape(c, rect(-hw, -hh, b.w, b.h), PAL.conc, { seed: S(k + 4), w: 3.2, amp: 1.5 });
+  stroke(c, rect(-hw + 8, -hh + 8, b.w - 16, b.h - 16), { closed: true, smooth: false, w: 1.4, seed: S(k + 5), alpha: 0.6 });
+  hatch(c, [[hw - 8, -hh + 8], [hw, -hh], [hw, hh], [-hw, hh], [-hw + 8, hh - 8], [hw - 8, hh - 8]], { seed: S(k + 6), gap: 4.5, alpha: 0.35 });
+  for (let i = 0; i < 3; i++) {
+    const sx = lerp(-hw + 30, hw - 30, hs(b.id, i, 1)), sy = lerp(-hh + 25, hh - 25, hs(b.id, i, 2));
+    fill(c, circ(sx, sy, 10 + hs(b.id, i, 3) * 14, 9), PAL.concD, { seed: S(k + 20 + i), amp: 3, smooth: true, alpha: 0.35 });
+  }
+  if (b.type === 'tank') {
+    const tx = hw - 44, ty = -hh + 42;
+    fill(c, circ(tx + 6, ty + 8, 25, 14), 'rgba(40,30,20,0.35)', { seed: S(k + 30), smooth: true });
+    shape(c, circ(tx, ty, 25, 16), PAL.rust, { seed: S(k + 31), w: 2.6, smooth: true });
+    stroke(c, circ(tx, ty, 17, 14), { closed: true, w: 1.3, seed: S(k + 32), color: PAL.rustD });
+    shape(c, circ(tx - 4, ty - 5, 5.5, 8), PAL.steel, { seed: S(k + 33), w: 1.3, smooth: true });
+    stroke(c, [[tx + 12, ty + 22], [tx + 13, ty + 40]], { w: 2.4, color: PAL.rustD, seed: S(k + 34), alpha: 0.8 });
+    for (let i = 0; i < 3; i++) {
+      const ax = -hw + 34 + i * 46, ay = hh - 38;
+      shape(c, rect(ax, ay, 34, 26), PAL.steel, { seed: S(k + 40 + i), w: 1.8 });
+      shape(c, circ(ax + 17, ay + 13, 8.5, 10), PAL.steelD, { seed: S(k + 44 + i), w: 1.3, smooth: true });
+      for (let bl = 0; bl < 3; bl++) { const a = bl * 2.09 + i; stroke(c, [[ax + 17, ay + 13], [ax + 17 + Math.cos(a) * 7, ay + 13 + Math.sin(a) * 7]], { w: 1.4, seed: S(k + 48 + i * 3 + bl), tin: 1, tout: 3 }); }
+    }
+    for (let i = 0; i < 8; i++) {
+      const px = -hw + 16 + hs(b.id, i, 7) * 22, py = -hh + 22 + i * 14;
+      shape(c, circ(px, py, 6 + hs(b.id, i, 8) * 7, 8), i % 3 ? PAL.plant : '#87a35a', { seed: S(k + 60 + i), w: 1.1, smooth: true, amp: 1.2 });
+    }
+    for (let i = 0; i < 7; i++) {
+      if (i === 2 || i === 5) continue;
+      const x0 = -hw + 10 + i * 30;
+      stroke(c, [[x0, -hh - 4], [x0 + 24, -hh - 3]], { w: 1.8, seed: S(k + 70 + i), smooth: false });
+    }
+  } else if (b.type === 'pad') {
+    stroke(c, circ(6, -6, 56, 28), { closed: true, w: 4, color: '#e1d29a', alpha: 0.7, seed: S(k + 30) });
+    stroke(c, [[-14, -30], [-14, 18]], { w: 6, color: '#e1d29a', alpha: 0.6, seed: S(k + 31), smooth: false });
+    stroke(c, [[26, -30], [26, 18]], { w: 6, color: '#e1d29a', alpha: 0.6, seed: S(k + 32), smooth: false });
+    stroke(c, [[-14, -6], [26, -6]], { w: 6, color: '#e1d29a', alpha: 0.6, seed: S(k + 33), smooth: false });
+    const tx = -hw + 22, ty = hh - 70;
+    shape(c, [[tx, ty], [tx + 56, ty - 6], [tx + 62, ty + 46], [tx + 4, ty + 50]], '#d9c9a0', { seed: S(k + 40), w: 2.2 });
+    stroke(c, [[tx + 2, ty + 24], [tx + 60, ty + 20]], { w: 1.6, seed: S(k + 41), smooth: false });
+    hatch(c, [[tx + 2, ty + 24], [tx + 60, ty + 20], [tx + 62, ty + 46], [tx + 4, ty + 50]], { seed: S(k + 42), gap: 5, alpha: 0.3 });
+    fill(c, circ(tx + 92, ty + 30, 10, 10), '#3c332b', { seed: S(k + 43), smooth: true, amp: 1.5 });
+    for (let i = 0; i < 3; i++) stroke(c, [[tx + 88 + i * 4, ty + 34], [tx + 89 + i * 4 + (SV - 1) * 1.5, ty + 23 - i * 2]], { w: 2.2, color: i === 1 ? PAL.sig : PAL.rust, seed: S(k + 44 + i), tin: 2, tout: 5 });
+    shape(c, rect(hw - 50, hh - 44, 30, 24), PAL.woodL, { seed: S(k + 50), w: 1.8 });
+    shape(c, rect(hw - 46, hh - 72, 24, 22), PAL.wood, { seed: S(k + 51), w: 1.8 });
+  } else {
+    shape(c, rect(-hw + 14, -hh + 14, 40, 54), PAL.concD, { seed: S(k + 30), w: 2.2 });
+    shape(c, rect(-hw + 22, -hh + 64, 22, 8), PAL.rustD, { seed: S(k + 31), w: 1.4 });
+    shape(c, rect(4, -18, 36, 46), '#2f4a5a', { seed: S(k + 32), w: 2 });
+    for (let i = 1; i < 3; i++) stroke(c, [[4 + i * 12, -18], [4 + i * 12, 28]], { w: 1, color: '#9fc0cc', alpha: 0.6, seed: S(k + 33 + i), smooth: false });
+    stroke(c, [[4, 5], [40, 5]], { w: 1, color: '#9fc0cc', alpha: 0.6, seed: S(k + 36), smooth: false });
+    stroke(c, [[-hw + 34, -hh + 30], [-hw + 64, -hh - 18]], { w: 1.8, seed: S(k + 37) });
+    stroke(c, [[-hw + 46, -hh + 6], [-hw + 60, -hh + 16]], { w: 1.3, seed: S(k + 38) });
+  }
+  c.restore();
+}
+function billboard(c) {
+  c.save(); c.translate(300, 652); c.rotate(-0.2);
+  fill(c, rect(-118, -44, 236, 84), 'rgba(98,178,165,0.4)', { seed: S(501), amp: 4, sc: 30 });
+  shape(c, rect(-80, 8, 10, 30), PAL.steelD, { seed: S(502), w: 1.6 });
+  shape(c, rect(66, 8, 10, 30), PAL.steelD, { seed: S(503), w: 1.6 });
+  fill(c, rect(-104, -26, 218, 64), 'rgba(8,36,42,0.45)', { seed: S(504) });
+  shape(c, rect(-110, -34, 216, 62), PAL.bone, { seed: S(505), w: 2.8 });
+  stroke(c, rect(-104, -28, 204, 50), { closed: true, smooth: false, w: 1.2, seed: S(506), alpha: 0.6 });
+  c.fillStyle = PAL.rustD; c.textBaseline = 'alphabetic';
+  c.font = `26px ${FD}`; c.fillText('海景房', -94 + REG.dx * 0.4, -2);
+  c.fillStyle = PAL.ink; c.globalAlpha = 0.8;
+  c.font = `13px ${FD}`; c.fillText('首付三成 · 临海现房', -94, 17);
+  c.globalAlpha = 1;
+  fill(c, [[-124, 6], [118, 4], [120, 50], [-126, 52]], 'rgba(27,92,102,0.74)', { seed: S(507), amp: 2.4, sc: 24 });
+  stroke(c, [[-118, 6], [-60, 3], [0, 7], [60, 3], [116, 5]], { w: 2.4, color: PAL.foam, alpha: 0.85, seed: S(508) });
+  c.restore();
+}
+
+// waves: drifting hand-drawn swell marks, kept off the shallows
+const WAVES = [];
+for (let i = 0; i < 160 && WAVES.length < 110; i++) {
+  const x = hs(i, 1) * W, y = hs(i, 2) * H;
+  const blocked = ROOFS.some((b) => Math.hypot(x - b.x, y - b.y) < Math.max(b.w, b.h) / 2 + 48) || Math.hypot(x - 300, y - 652) < 120;
+  if (!blocked) WAVES.push({ i, x, y, L: 16 + hs(i, 3) * 34, a: (hs(i, 4) - 0.5) * 0.5, spd: 6 + hs(i, 5) * 9, al: 0.28 + hs(i, 6) * 0.32, w: 1.4 + hs(i, 7) * 1.3 });
+}
+function waves(c, t) {
+  for (const wv of WAVES) {
+    const x = ((wv.x + t * wv.spd) % (W + 80)) - 40, y = wv.y + Math.sin(t * 0.7 + wv.i) * 2;
+    const blocked = ROOFS.some((b) => Math.hypot(x - b.x, y - b.y) < Math.max(b.w, b.h) / 2 + 40);
+    if (blocked) continue;
+    const L = wv.L;
+    stroke(c, xf([[-L / 2, 0], [0, -L * 0.13], [L / 2, 0]], x, y, wv.a), { w: wv.w, color: PAL.foam, alpha: wv.al, seed: S(wv.i * 3 + 1000), amp: 1.1, sc: 20 });
+  }
+  for (let i = 0; i < 26; i++) { // sun glints, top-left
+    if (hs(i, SV, 9) < 0.35) continue;
+    const x = hs(i, 21) * 520, y = hs(i, 22) * 360;
+    if (ROOFS.some((b) => Math.hypot(x - b.x, y - b.y) < Math.max(b.w, b.h) / 2 + 36)) continue;
+    stroke(c, [[x, y], [x + 7, y - 1]], { w: 2, color: '#fff3c8', alpha: 0.75, seed: S(1500 + i), tin: 2, tout: 3, amp: 0.4 });
+  }
+}
+function foamRings(c, t, f) {
+  for (const b of ROOFS) {
+    c.save(); c.translate(b.x, b.y); c.rotate(b.r);
+    [[5, 2.4, 0.85, 8], [16, 1.6, 0.42, 6]].forEach(([e, w, al, K], ring) => {
+      const per = lin(rect(-b.w / 2 - e, -b.h / 2 - e, b.w + 2 * e, b.h + 2 * e), true);
+      const n = per.length, seg = Math.floor(n / K), ph = (f * (ring ? -2 : 3)) % n;
+      for (let k = 0; k < K; k++) {
+        const st = (k * seg + ph + n) % n, len = Math.floor(seg * (0.55 + 0.2 * hs(b.id, k, ring)));
+        const pts = [];
+        for (let j = 0; j < len; j += 2) pts.push(per[(st + j) % n]);
+        if (pts.length > 2) stroke(c, pts, { w, color: PAL.foam, alpha: al, seed: S(b.id * 40 + k + ring * 20 + 2000), smooth: false, amp: 1.4, sc: 18 });
+      }
+    });
+    c.restore();
+  }
+}
+function wake(c, t) {
+  for (let k = 0; k < 9; k++) {
+    const s = ((k + t * 1.4) % 9) / 9;
+    const d = 172 + s * 300, sp = 58 + s * 120, al = (1 - s) * 0.75;
+    [-1, 1].forEach((sg) => stroke(c, xf([[-16, -6], [0, 0], [16, 8]], sg * sp, d, sg * 0.5), { w: 2.4 - s, color: PAL.foam, alpha: al, seed: S(3000 + k * 2 + (sg > 0 ? 1 : 0)), amp: 1.6, sc: 16 }));
+  }
+  for (let k = 0; k < 6; k++) {
+    const s = ((k + t * 2.2) % 6) / 6, y = 176 + s * 150;
+    stroke(c, [[-26 - s * 20, y], [-8, y + 5], [10, y - 3], [28 + s * 20, y + 3]], { w: 3.4 - s * 2, color: PAL.foam, alpha: (1 - s) * 0.7, seed: S(3100 + k), amp: 2.2, sc: 14 });
+  }
+  [-1, 1].forEach((sg, i) => {
+    stroke(c, [[sg * 4, -210], [sg * 44, -160], [sg * 94, -96], [sg * 128, -50]], { w: 3, color: PAL.foam, alpha: 0.7, seed: S(3200 + i), amp: 2, sc: 18 });
+    stroke(c, [[sg * 30, -150], [sg * 84, -70], [sg * 112, -20]], { w: 1.8, color: PAL.foam, alpha: 0.4, seed: S(3210 + i), amp: 2, sc: 18 });
+  });
+}
+function debris(c, t) {
+  const bob = Math.sin(t * 1.6) * 1.5;
+  // oil drum
+  c.save(); c.translate(772, 648 + bob);
+  stroke(c, circ(0, 0, 21, 14), { closed: true, w: 1.8, color: PAL.foam, alpha: 0.6, seed: S(4000) });
+  shape(c, circ(0, 0, 13, 12), '#a8402a', { seed: S(4001), w: 2, smooth: true });
+  stroke(c, circ(0, 0, 8, 10), { closed: true, w: 1.1, seed: S(4002), alpha: 0.7 });
+  c.restore();
+  // tyre
+  c.save(); c.translate(392, 430 - bob);
+  stroke(c, circ(0, 0, 22, 14), { closed: true, w: 1.6, color: PAL.foam, alpha: 0.5, seed: S(4010) });
+  stroke(c, circ(0, 0, 11, 12), { closed: true, w: 8, color: '#2b2a27', seed: S(4011), jit: 0.1 });
+  stroke(c, circ(0, 0, 11, 12), { closed: true, w: 1, color: '#6f6b60', seed: S(4012) });
+  c.restore();
+  // salvage point: floating crate + signal ring
+  c.save(); c.translate(836, 506 + bob * 0.6);
+  for (let i = 0; i < 12; i++) {
+    const a0 = (i / 12) * Math.PI * 2 + t * 0.5, a1 = a0 + 0.3;
+    stroke(c, [[Math.cos(a0) * 36, Math.sin(a0) * 36], [Math.cos((a0 + a1) / 2) * 36, Math.sin((a0 + a1) / 2) * 36], [Math.cos(a1) * 36, Math.sin(a1) * 36]], { w: 2.2, color: PAL.sig, alpha: 0.8, seed: S(4020 + i), tin: 2, tout: 2, amp: 0.6 });
+  }
+  stroke(c, circ(0, 0, 22, 14), { closed: true, w: 1.6, color: PAL.foam, alpha: 0.55, seed: S(4040) });
+  c.rotate(0.4);
+  shape(c, rect(-14, -11, 28, 22), PAL.woodL, { seed: S(4041), w: 2 });
+  stroke(c, [[-12, -9], [12, 9]], { w: 1.4, seed: S(4042), smooth: false });
+  c.rotate(-0.4);
+  const tw = 7 + SV * 2.5;
+  shape(c, [[16, -30 - tw], [19, -33], [16 + tw, -30], [19, -27], [16, -30 + tw], [13, -27], [16 - tw, -30], [13, -33]], PAL.sig, { seed: S(4043), w: 1.2, amp: 0.5 });
+  c.restore();
+}
+function telegraph(c) {
+  const dir = [Math.sin(EB.r), -Math.cos(EB.r)];
+  const bx = EB.x + dir[0] * 160 * EB.s, by = EB.y + dir[1] * 160 * EB.s;
+  const L = 330, spread = 0.09;
+  const ends = [-1, 1].map((sg) => { const a = EB.r + sg * spread; return [bx + Math.sin(a) * L, by - Math.cos(a) * L]; });
+  fill(c, [[bx, by], ends[0], ends[1]], 'rgba(181,48,42,0.2)', { seed: S(5000), amp: 1.5 });
+  ends.forEach((e, i) => {
+    const n = 14;
+    for (let k = 0; k < n; k++) {
+      const u0 = k / n, u1 = u0 + 0.6 / n;
+      stroke(c, [[lerp(bx, e[0], u0), lerp(by, e[1], u0)], [lerp(bx, e[0], u1), lerp(by, e[1], u1)]], { w: 2.2, color: PAL.red, alpha: 0.9, seed: S(5010 + k + i * 20), smooth: false, tin: 2, tout: 2, amp: 0.8 });
+    }
+  });
+  const mx = EB.x + 74, my = EB.y - 70;
+  shape(c, circ(mx, my, 14, 12), PAL.red, { seed: S(5050), w: 2, smooth: true });
+  stroke(c, [[mx, my - 8], [mx, my + 2]], { w: 3.4, color: PAL.bone, seed: S(5051), tin: 2, tout: 3 });
+  fill(c, circ(mx, my + 7, 2, 6), PAL.bone, { seed: S(5052), smooth: true, amp: 0.3 });
+}
+function gulls(c, t) {
+  [[0, 160, 1], [70, 196, 0.8]].forEach(([off, gy, s], i) => {
+    const gx = ((t * 24 + 380 + off) % (W + 200)) - 100, y = gy + Math.sin(t * 0.9 + i) * 5;
+    const fl = (SV - 1) * 4 * s;
+    const P = (dx, dy) => [[dx - 14 * s, dy + fl], [dx - 7 * s, dy - 6 * s], [dx, dy], [dx + 7 * s, dy - 6 * s], [dx + 14 * s, dy + fl]];
+    stroke(c, P(gx + 34, y + 46), { w: 2.2, color: 'rgba(4,22,28,1)', alpha: 0.25, seed: S(6000 + i) });
+    stroke(c, P(gx, y), { w: 2.4, color: PAL.foam, seed: S(6010 + i) });
+  });
+}
+function hud(c) {
+  shape(c, rect(22, 20, 236, 88), 'rgba(230,214,178,0.94)', { seed: S(7000), w: 2.4, smooth: false });
+  c.fillStyle = PAL.ink; c.textBaseline = 'middle';
+  c.font = `18px ${FD}`; c.fillText('燃料', 38, 46);
+  stroke(c, rect(88, 38, 154, 16), { closed: true, w: 1.8, seed: S(7001), smooth: false });
+  fill(c, rect(91, 41, 154 * 0.62 - 6, 10), PAL.rust, { seed: S(7002), dx: REG.dx * 0.5, dy: REG.dy * 0.5 });
+  for (let i = 1; i < 4; i++) stroke(c, [[88 + i * 38.5, 36], [88 + i * 38.5, 41]], { w: 1.2, seed: S(7003 + i), smooth: false, tin: 1, tout: 1 });
+  c.fillStyle = PAL.ink; c.font = `18px ${FD}`; c.fillText('货值', 38, 84);
+  c.font = `500 16px ${FM}`; c.fillText('1,240', 88, 85);
+  c.font = `18px ${FD}`; c.fillText('潮汐', 156, 84);
+  c.font = `500 16px ${FM}`; c.fillText('03:12', 196, 85);
+  // virtual stick
+  fill(c, circ(112, 690, 58, 20), 'rgba(4,22,28,0.22)', { seed: S(7100), smooth: true });
+  stroke(c, circ(112, 690, 58, 20), { closed: true, w: 2.4, color: PAL.bone, alpha: 0.55, seed: S(7101) });
+  shape(c, circ(128, 670, 24, 14), 'rgba(230,214,178,0.85)', { seed: S(7102), w: 2, smooth: true });
+  // skill buttons
+  [[1124, 712, 40, '冲刺', 20], [1034, 736, 29, '整理', 16]].forEach(([x, y, r, label, fs], i) => {
+    shape(c, circ(x, y, r, 16), 'rgba(230,214,178,0.9)', { seed: S(7200 + i), w: 2.4, smooth: true });
+    c.fillStyle = PAL.ink; c.font = `${fs}px ${FD}`; c.textAlign = 'center'; c.fillText(label, x, y + 1); c.textAlign = 'left';
+  });
+}
+
+// ------------------------------------------------------------------ build cached layers
+let SEA, STATIC = [], BOAT = [], ENEMY = [], INV = [], GRAIN;
+const BO = { x: 150, y: 240, w: 300, h: 460 };
+const EO = { x: 110, y: 290, w: 220, h: 440 };
+
+function buildSea() {
+  const c = layer(W, H);
+  const g = c.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#2a6d73'); g.addColorStop(0.45, '#1b5560'); g.addColorStop(1, '#0e3540');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const sun = c.createRadialGradient(140, 90, 20, 140, 90, 520);
+  sun.addColorStop(0, 'rgba(255,240,200,0.16)'); sun.addColorStop(1, 'rgba(255,240,200,0)');
+  c.fillStyle = sun; c.fillRect(0, 0, W, H);
+  for (let i = 0; i < 34; i++) {
+    const x = hs(i, 31) * W, y = hs(i, 32) * H, r = 60 + hs(i, 33) * 160, light = hs(i, 34) > 0.5;
+    const m = c.createRadialGradient(x, y, 0, x, y, r);
+    m.addColorStop(0, light ? 'rgba(120,200,190,0.07)' : 'rgba(4,20,26,0.09)'); m.addColorStop(1, 'rgba(0,0,0,0)');
+    c.fillStyle = m; c.fillRect(x - r, y - r, 2 * r, 2 * r);
+  }
+  // the drowned street grid, far below
+  c.save(); c.translate(W / 2, H / 2); c.rotate(0.06); c.translate(-W / 2, -H / 2);
+  for (let gx = -160; gx < W + 160; gx += 170) for (let gy = -160; gy < H + 160; gy += 150) {
+    if (hs(gx, gy, 3) < 0.25) continue;
+    fill(c, rect(gx + 24, gy + 22, 122, 104), 'rgba(120,200,190,0.05)', { seed: gx * 0.01 + gy * 0.013, amp: 4, sc: 60 });
+  }
+  c.restore();
+  SEA = c.canvas;
+}
+function buildGrain() {
+  const g = document.createElement('canvas'); g.width = g.height = 256;
+  const gx = g.getContext('2d'), id = gx.createImageData(256, 256);
+  for (let i = 0; i < 256 * 256; i++) {
+    const n = 205 + Math.floor(hs(i, 77) * 50);
+    id.data[i * 4] = n; id.data[i * 4 + 1] = n - 2; id.data[i * 4 + 2] = n - 8; id.data[i * 4 + 3] = 255;
+  }
+  gx.putImageData(id, 0, 0);
+  GRAIN = g;
+}
+function buildVariant(v) {
+  setVariant(v);
+  const st = layer(W, H);
+  ROOFS.forEach((b) => roofStatic(st, b));
+  billboard(st);
+  STATIC[v] = st.canvas;
+  const bc = layer(BO.w, BO.h, BO.x, BO.y);
+  drawBoat(bc, 'scene');
+  BOAT[v] = bc.canvas;
+  const ec = layer(EO.w, EO.h, EO.x, EO.y);
+  ec.scale(EB.s, EB.s);
+  drawEnemy(ec);
+  ENEMY[v] = ec.canvas;
+  const ic = layer(440, 520);
+  const bg = ic.createLinearGradient(0, 0, 440, 520);
+  bg.addColorStop(0, '#1d5560'); bg.addColorStop(1, '#0f3840');
+  ic.fillStyle = bg; ic.fillRect(0, 0, 440, 520);
+  for (let i = 0; i < 14; i++) {
+    const x = hs(i, 51) * 440, y = hs(i, 52) * 520;
+    stroke(ic, [[x - 12, y], [x, y - 3], [x + 12, y]], { w: 1.4, color: PAL.foam, alpha: 0.25, seed: S(8000 + i) });
+  }
+  ic.save(); ic.translate(220, 262); ic.scale(1.18, 1.18); drawBoat(ic, 'inv'); ic.restore();
+  grainPass(ic, 440, 520, v);
+  INV[v] = ic.canvas;
+}
+function grainPass(c, w, h, v) {
+  c.save();
+  c.globalCompositeOperation = 'multiply';
+  c.globalAlpha = 0.32;
+  const ox = Math.floor(hs(v, 61) * 256), oy = Math.floor(hs(v, 62) * 256);
+  c.translate(-ox, -oy);
+  c.fillStyle = c.createPattern(GRAIN, 'repeat');
+  c.fillRect(0, 0, w + ox, h + oy);
+  c.restore();
+}
+
+// ------------------------------------------------------------------ frame
+const scene = document.getElementById('scene');
+const invCv = document.getElementById('inv');
+scene.width = W * DPR; scene.height = H * DPR;
+invCv.width = 440 * DPR; invCv.height = 520 * DPR;
+const sc = scene.getContext('2d'), ivc = invCv.getContext('2d');
+
+function drawScene(v, t, f) {
+  const c = sc;
+  setVariant(v);
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  c.drawImage(SEA, 0, 0, W, H);
+  c.drawImage(STATIC[v], 0, 0, W, H);
+  foamRings(c, t, f);
+  waves(c, t);
+  debris(c, t);
+  c.save(); c.translate(PB.x, PB.y); c.rotate(PB.r + 0.014 * Math.sin(t * 1.3));
+  wake(c, t);
+  c.drawImage(BOAT[v], -BO.x, -BO.y, BO.w, BO.h);
+  c.restore();
+  telegraph(c);
+  c.save(); c.translate(EB.x, EB.y); c.rotate(EB.r + 0.02 * Math.sin(t * 1.7 + 1));
+  c.drawImage(ENEMY[v], -EO.x, -EO.y, EO.w, EO.h);
+  c.restore();
+  gulls(c, t);
+  const vg = c.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 0.95);
+  vg.addColorStop(0, 'rgba(4,18,24,0)'); vg.addColorStop(1, 'rgba(4,18,24,0.45)');
+  c.fillStyle = vg; c.fillRect(0, 0, W, H);
+  hud(c);
+  grainPass(c, W, H, v);
+}
+function drawInv(v) {
+  ivc.setTransform(1, 0, 0, 1, 0, 0);
+  ivc.drawImage(INV[v], 0, 0);
+}
+
+let lastF = -1, visible = true;
+function tick(now) {
+  if (visible) {
+    const t = REDUCE ? 0 : now / 1000;
+    const f = Math.floor(t * 12);       // animated "on 2s": 12 drawings per second
+    if (f !== lastF) {
+      lastF = f;
+      const v = REDUCE ? 0 : f % 3;
+      drawScene(v, f / 12, f);
+      drawInv(v);
+    }
+  }
+  if (!REDUCE) requestAnimationFrame(tick);
+}
+document.addEventListener('visibilitychange', () => { visible = !document.hidden; });
+
+const fontsReady = document.fonts
+  ? Promise.race([
+      Promise.all([
+        document.fonts.load(`18px ${FD}`, '燃料货值潮汐冲刺整理海景房首付三成临海现零件'),
+        document.fonts.load(`500 16px ${FM}`, '0123456789,:'),
+      ]),
+      new Promise((r) => setTimeout(r, 2500)),
+    ])
+  : Promise.resolve();
+fontsReady.catch(() => {}).then(() => {
+  buildSea(); buildGrain();
+  for (let v = 0; v < 3; v++) buildVariant(v);
+  requestAnimationFrame(tick);
+});
+})();
+</script>
