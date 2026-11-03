@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { RGB, rgb, mixc, mul, c01, ss, fbm, n2, hs } from '../core/noise';
 
-export const FD = "'ZCOOL XiaoWei', 'Songti SC', 'STSong', serif";
+export const FD = "'Noto Serif SC', 'Songti SC', 'STSong', serif";
 const RUST: RGB = [176, 83, 42], RUSTD: RGB = [110, 46, 24], SALT: RGB = [214, 208, 192], ALGAE: RGB = [58, 74, 52];
 
 interface WOpts { seed?: number; rust?: number; fade?: number; grime?: number; corr?: number; edge?: boolean }

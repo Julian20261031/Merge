@@ -8,7 +8,7 @@
   --signal: #f2c230;
   --enemy: #b5302a;
   --safe-green: #bfe3c8;
-  --f-display: 'ZCOOL XiaoWei', 'Songti SC', 'STSong', serif;
+  --f-display: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
   --f-body: -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', sans-serif;
   --f-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
   --sat: env(safe-area-inset-top, 0px);
