@@ -29,7 +29,7 @@ export interface RunEnd { win: boolean; reason: 'win' | 'fuel' | 'sunk'; kept: I
 export class Game {
   renderer: THREE.WebGLRenderer;
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(40, 1, 1, 600);
+  camera = new THREE.PerspectiveCamera(40, 1, 1, 900);
   water = createWater();
   level = new THREE.Group();
   hold = new Hold();
@@ -345,7 +345,7 @@ export class Game {
     this.water.update(this.T, this.camLook, { x: s.x, z: s.z, fx, fz, speed01 }, this.trail);
 
     // camera: north-up, a little ahead of the boat
-    const dist = 96, phi = 0.8;
+    const dist = 135, phi = 0.8;
     const look = new THREE.Vector3(s.x + fx * s.speed * 0.9, 0, s.z + fz * s.speed * 0.9 - 3);
     this.camLook.lerp(look, Math.min(1, dt * 3));
     this.camera.position.set(this.camLook.x, Math.cos(phi) * dist, this.camLook.z + Math.sin(phi) * dist);

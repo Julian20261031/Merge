@@ -117,7 +117,7 @@ export function buildWorld(scene: THREE.Object3D, seed: number, map: MapDef): Wo
   for (let tries = 0; roofs.length < map.roofs && tries < 800; tries++) {
     const a = rand() * Math.PI * 2, r = 45 + rand() * (R0 - 55);
     const x = Math.cos(a) * r, z = Math.sin(a) * r;
-    if (roofs.some((o) => Math.hypot(o.x - x, o.z - z) < 40)) continue;
+    if (roofs.some((o) => Math.hypot(o.x - x, o.z - z) < 75)) continue;
     if (Math.hypot(x, z + 10) < 50) continue;
     roofs.push({ x, z, w: 12 + rand() * 12, d: 10 + rand() * 10, rot: (rand() - 0.5) * 1.2, top: 1.7 + rand() * 1.6, type: types[Math.floor(rand() * 4)] });
   }

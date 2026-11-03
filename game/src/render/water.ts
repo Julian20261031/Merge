@@ -38,7 +38,7 @@ const GLSL_COMMON = `
 const GW_GLSL = GW.map((g) => `gw(vec2(${g.dx.toFixed(4)}, ${g.dz.toFixed(4)}), ${g.k.toFixed(4)}, ${g.A.toFixed(3)}, ${g.w.toFixed(4)}, p, off, nrm);`).join('\n');
 
 export function createWater() {
-  const SIZE = 520, SEGS = 240, CELL = SIZE / SEGS;
+  const SIZE = 720, SEGS = 280, CELL = SIZE / SEGS;
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEGS, SEGS);
   geo.rotateX(-Math.PI / 2);
   const uniforms = {
@@ -109,11 +109,11 @@ export function createWater() {
         float oil = smoothstep(0.77, 0.81, vn2(p * 0.06 + vec2(13.0, 7.0)) * 0.65 + vn2(p * 0.15 + uTime * 0.05) * 0.35) * (1.0 - sh);
         float ph = p.x * 0.7 + p.y * 0.35 + vn2(p * 0.3) * 4.0;
         col = mix(col, col * 0.75 + 0.03 * vec3(sin(ph), sin(ph + 2.1), sin(ph + 4.2)) + 0.01, oil * 0.7);
-        col = mix(col, vec3(1.0, 0.94, 0.8), sp * 0.6 * (1.0 - oil));
+        col = mix(col, vec3(1.0, 0.94, 0.8), sp * 0.1 * (1.0 - oil));
         vec2 fp = p - uFlow * uTime * 0.4;
-        float cap = smoothstep(0.84, 0.92, hn) * smoothstep(0.55, 0.7, 0.6 * vn2(fp * 0.45) + 0.4 * vn2(fp * 1.1 + 4.0));
+        float cap = smoothstep(0.86, 0.94, hn) * smoothstep(0.66, 0.8, 0.6 * vn2(fp * 0.45) + 0.4 * vn2(fp * 1.1 + 4.0));
         float streak = smoothstep(0.7, 0.76, vn2(vec2(dot(fp, vec2(0.94, -0.33)) * 0.1, dot(fp, vec2(0.33, 0.94)) * 0.7))) * 0.2;
-        col = mix(col, uFoam, max(cap * 0.6, streak * 0.7) * (1.0 - oil) * (1.0 - sh * 0.7));
+        col = mix(col, uFoam, max(cap * 0.4, streak * 0.5) * (1.0 - oil) * (1.0 - sh * 0.7));
         // wake: every trail point is a ring of foam that keeps spreading where it was laid down,
         // so the wake stays on the water and curves when the boat turns
         float wake = 0.0;
