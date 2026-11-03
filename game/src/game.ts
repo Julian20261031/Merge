@@ -48,7 +48,7 @@ export class Game {
   extractT = 0;
   driftT = 0;
   fogToastT = 0;
-  trail: { x: number; z: number; born: number; k: number }[] = [];
+  trail: { x: number; z: number; born: number; k: number; fx: number; fz: number }[] = [];
   trailT = 0;
   camLook = new THREE.Vector3();
   combat: Combat;
@@ -337,7 +337,7 @@ export class Game {
     this.trailT += sdt;
     if (this.trailT >= TRAIL_EVERY) {
       this.trailT = 0;
-      this.trail.unshift({ x: s.x - fx * 15, z: s.z - fz * 15, born: this.T, k: speed01 });
+      this.trail.unshift({ x: s.x - fx * 15, z: s.z - fz * 15, born: this.T, k: speed01, fx, fz });
       if (this.trail.length > N_TRAIL) this.trail.length = N_TRAIL;
     }
 

@@ -9,9 +9,9 @@ import { waveH } from '../render/water';
 
 export type EnemyKind = 'rammer' | 'harpoon' | 'gunboat';
 export const ENEMY_STATS: Record<EnemyKind, { hp: number; speed: number; scale: number; aggro: number }> = {
-  rammer: { hp: 45, speed: 13, scale: 0.065, aggro: 65 },
-  harpoon: { hp: 40, speed: 12, scale: 0.06, aggro: 70 },
-  gunboat: { hp: 70, speed: 8.5, scale: 0.075, aggro: 85 },
+  rammer: { hp: 75, speed: 13, scale: 0.065, aggro: 80 },
+  harpoon: { hp: 60, speed: 12, scale: 0.06, aggro: 85 },
+  gunboat: { hp: 110, speed: 8.5, scale: 0.075, aggro: 95 },
 };
 const EHULL2D = [[0, -190], [40, -140], [62, -60], [64, 40], [56, 120], [-56, 120], [-64, 40], [-62, -60], [-40, -140]];
 const TYRE = 0x2b2a27, ROPE = 0x8a7550, RED = 0xb5302a;

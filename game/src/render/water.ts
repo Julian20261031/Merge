@@ -48,6 +48,7 @@ export function createWater() {
     uFlow: { value: new THREE.Vector2(0, 0) },
     uBoat: { value: new THREE.Vector2() }, uFwd: { value: new THREE.Vector2(0, -1) }, uWake: { value: 0 },
     uTrail: { value: Array.from({ length: N_TRAIL }, () => new THREE.Vector4(1e4, 1e4, 99, 0)) },
+    uTrailF: { value: Array.from({ length: N_TRAIL }, () => new THREE.Vector2(0, -1)) },
     uDeep: { value: new THREE.Color(0x14292a) }, uMid: { value: new THREE.Color(0x2f625b) },
     uShal: { value: new THREE.Color(0x6a9a80) }, uFoam: { value: new THREE.Color(0xe2e4d4) },
     uFogC: { value: new THREE.Color(FOG_COLOR) },
@@ -74,7 +75,7 @@ export function createWater() {
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: GLSL_COMMON + `
-      uniform vec2 uFlow, uBoat, uFwd; uniform float uWake; uniform vec4 uTrail[${N_TRAIL}]; uniform vec3 uDeep, uMid, uShal, uFoam, uFogC;
+      uniform vec2 uFlow, uBoat, uFwd; uniform float uWake; uniform vec4 uTrail[${N_TRAIL}]; uniform vec2 uTrailF[${N_TRAIL}]; uniform vec3 uDeep, uMid, uShal, uFoam, uFogC;
       varying vec3 vW, vN; varying float vH;
       float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
       float vn2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
@@ -105,9 +106,9 @@ export function createWater() {
           fo = max(fo, 0.45 * (1.0 - smoothstep(0.1, 0.2, abs(dist - 1.9))) * smoothstep(0.5, 0.58, vn2(vec2(ang * 7.0 + float(i) * 3.0, -uTime * 0.7))));
         }
         col = mix(col, uShal * (0.85 + 0.25 * hn), sh * 0.7);
-        float oil = smoothstep(0.73, 0.78, vn2(p * 0.06 + vec2(13.0, 7.0)) * 0.65 + vn2(p * 0.15 + uTime * 0.05) * 0.35) * (1.0 - sh);
+        float oil = smoothstep(0.77, 0.81, vn2(p * 0.06 + vec2(13.0, 7.0)) * 0.65 + vn2(p * 0.15 + uTime * 0.05) * 0.35) * (1.0 - sh);
         float ph = p.x * 0.7 + p.y * 0.35 + vn2(p * 0.3) * 4.0;
-        col = mix(col, col * 0.55 + 0.035 * vec3(sin(ph), sin(ph + 2.1), sin(ph + 4.2)) + 0.02, oil * 0.8);
+        col = mix(col, col * 0.75 + 0.03 * vec3(sin(ph), sin(ph + 2.1), sin(ph + 4.2)) + 0.01, oil * 0.7);
         col = mix(col, vec3(1.0, 0.94, 0.8), sp * 0.6 * (1.0 - oil));
         vec2 fp = p - uFlow * uTime * 0.4;
         float cap = smoothstep(0.84, 0.92, hn) * smoothstep(0.55, 0.7, 0.6 * vn2(fp * 0.45) + 0.4 * vn2(fp * 1.1 + 4.0));
@@ -121,10 +122,10 @@ export function createWater() {
             vec4 tr = uTrail[i];
             if (tr.w <= 0.0 || tr.z > ${TRAIL_LIFE.toFixed(1)}) continue;
             float d = distance(p, tr.xy), age = tr.z;
-            float r = 2.8 + age * 3.6;
+            float r = 2.8 + age * 3.2;
             if (d > r + 3.0) continue;
             float w = 0.32 + age * 0.07;
-            float ring = 1.0 - smoothstep(w, w + 0.3, abs(d - r));
+            float ring = (1.0 - smoothstep(w, w + 0.3, abs(d - r))) * smoothstep(0.55, 0.05, dot((p - tr.xy) / max(d, 0.001), uTrailF[i]));
             float churn = (1.0 - smoothstep(1.3 + age * 0.45, 2.2 + age * 0.7, d)) * (1.0 - smoothstep(0.4, 2.6, age));
             wake = max(wake, max(ring * 0.85, churn) * (1.0 - age / ${TRAIL_LIFE.toFixed(1)}) * tr.w);
           }
@@ -148,10 +149,10 @@ export function createWater() {
   return {
     mesh,
     /** trail: newest first, each { x, z, born (sim time), strength 0..1 } */
-    update(t: number, center: THREE.Vector3, boat: { x: number; z: number; fx: number; fz: number; speed01: number }, trail: { x: number; z: number; born: number; k: number }[] = []) {
+    update(t: number, center: THREE.Vector3, boat: { x: number; z: number; fx: number; fz: number; speed01: number }, trail: { x: number; z: number; born: number; k: number; fx: number; fz: number }[] = []) {
       for (let i = 0; i < N_TRAIL; i++) {
         const tr = trail[i];
-        if (tr) uniforms.uTrail.value[i].set(tr.x, tr.z, t - tr.born, tr.k); else uniforms.uTrail.value[i].set(1e4, 1e4, 99, 0);
+        if (tr) { uniforms.uTrail.value[i].set(tr.x, tr.z, t - tr.born, tr.k); uniforms.uTrailF.value[i].set(tr.fx, tr.fz); } else uniforms.uTrail.value[i].set(1e4, 1e4, 99, 0);
       }
       uniforms.uTime.value = t;
       mesh.position.set(Math.round(center.x / CELL) * CELL, 0, Math.round(center.z / CELL) * CELL);

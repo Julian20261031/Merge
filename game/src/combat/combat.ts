@@ -11,8 +11,8 @@ import { waveH } from '../render/water';
 import { t } from '../i18n/zh';
 
 export const WEAPONS = {
-  cannon: { range: 72, arc: 0.44, cool: 2.0, dmg: 34, speed: 70, splash: 3.5 },
-  gun: { range: 44, arc: 0.95, cool: 0.15, dmg: 4, speed: 115, splash: 0 },
+  cannon: { range: 56, arc: 0.44, cool: 2.4, dmg: 26, speed: 70, splash: 3.5 },
+  gun: { range: 36, arc: 0.95, cool: 0.15, dmg: 3, speed: 115, splash: 0 },
 };
 export const PLAYER_HULL = 120;
 const HARPOON_STEAL_TIME = 3.5, TETHER_SNAP = 60;
@@ -108,7 +108,7 @@ export class Combat {
         s.speed *= 0.3;
         this.fx.explosion(b.x, 2, b.z, 0.8);
         this.fx.splash(b.x, 0, b.z, 1.4);
-        this.hooks.hitPlayer(24, b.x, b.z, 'ram');
+        this.hooks.hitPlayer(30, b.x, b.z, 'ram');
         e.damage(4);
         return true;
       },
@@ -134,7 +134,7 @@ export class Combat {
         ring.add(fill);
         this.group.add(ring);
         const start = new THREE.Vector3(e.s.x, 4, e.s.z);
-        this.projs.push({ kind: 'mortar', mesh: m, pos: start.clone(), vel: new THREE.Vector3(), life: 99, dmg: 18, from: e, start, target, k: 0, dur: 1.7, ring });
+        this.projs.push({ kind: 'mortar', mesh: m, pos: start.clone(), vel: new THREE.Vector3(), life: 99, dmg: 22, from: e, start, target, k: 0, dur: 1.7, ring });
         this.fx.muzzle(e.s.x, 5, e.s.z, 1.6);
         this.fx.smoke(e.s.x, 5, e.s.z);
       },
