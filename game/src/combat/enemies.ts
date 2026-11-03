@@ -156,11 +156,11 @@ export class Enemy {
           this.aimYaw = Math.atan2(-(lead.x - this.s.x), -(lead.z - this.s.z));
           this.s.yaw += Math.max(-dt * 1.4, Math.min(dt * 1.4, angleDiff(this.s.yaw, this.aimYaw)));
           this.s.speed *= 0.9;
-          this.showLane(55, 5.5, 0.25 + 0.3 * Math.abs(Math.sin(this.t * 14)));
+          this.showLane(55, 5.5, 0.4 + 0.35 * Math.abs(Math.sin(this.t * 14)));
           if (this.t > 0.95) { this.go('dash'); this.s.speed = 32; this.s.yawRate = 0; }
         } else if (this.state === 'dash') {
           this.s.speed = 32;
-          this.showLane(55 - this.t * 30, 5.5, 0.18);
+          this.showLane(55 - this.t * 30, 5.5, 0.3);
           if (api.ramCheck(this)) { this.go('recover'); this.s.speed = 2; this.cool = 4; }
           else if (this.t > 1.5) { this.go('recover'); this.cool = 3; }
         } else if (this.state === 'recover') {

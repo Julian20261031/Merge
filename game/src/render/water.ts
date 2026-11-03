@@ -87,7 +87,7 @@ export function createWater() {
         float g = clamp(vn2(p * 0.006 + 11.0) * 1.2 - 0.1, 0.0, 1.0);
         float hn = clamp(vH / ${MAX_AMP.toFixed(2)} * 0.5 + 0.5, 0.0, 1.0);
         vec3 trough = mix(uDeep * 1.15, uDeep * 0.85, g);
-        vec3 crest = mix(uMid * 1.3 + vec3(0.02, 0.05, 0.03), uMid, g * 0.6);
+        vec3 crest = mix(uMid * 1.15 + vec3(0.01, 0.03, 0.02), uMid, g * 0.6);
         vec3 col = mix(trough, crest, smoothstep(0.2, 0.9, hn));
         col *= 0.95 + 0.1 * vn2(p * 0.05 + 3.0);
         vec2 q = (p + vec2(3000.0)) / vec2(17.0, 15.0);
@@ -95,7 +95,7 @@ export function createWater() {
         float d = dot(n, L);
         col *= 0.8 + 0.13 * smoothstep(0.55, 0.62, d) + 0.12 * smoothstep(0.78, 0.84, d);
         float fr = pow(1.0 - max(dot(n, V), 0.0), 4.0);
-        col = mix(col, uFogC * 1.4, fr * 0.55);
+        col = mix(col, uFogC * 1.2, fr * 0.25);
         float sp = smoothstep(0.972, 0.982, dot(n, normalize(L + V)));
         float rd = roofDist(p), sh = 1.0 - smoothstep(0.0, 3.6, rd), fo = 0.0;
         for (int i = 0; i < ${N_CALM}; i++) {
