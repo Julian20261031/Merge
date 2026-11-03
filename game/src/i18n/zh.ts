@@ -14,7 +14,6 @@ export const zh = {
   extracting: '撤离中',
   drifting: '燃料耗尽，船开始漂流……',
   fog: '前面雾太大，回头吧',
-  rotatePhone: '请把手机横过来',
   // hold panel
   panelTitle: '货舱',
   cargo: '货箱',

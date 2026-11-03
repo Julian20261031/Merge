@@ -7,7 +7,7 @@ import { MAPS } from './world/maps';
 import { Game } from './game';
 import { Hub } from './ui/hub';
 import { showResult } from './ui/screens';
-import { t } from './i18n/zh';
+import { fitStage } from './core/view';
 
 // paper grain over everything, like the art samples
 (function grain() {
@@ -18,7 +18,7 @@ import { t } from './i18n/zh';
   x.putImageData(id, 0, 0);
   document.getElementById('grain')!.style.backgroundImage = `url(${g.toDataURL()})`;
 })();
-document.getElementById('rotate')!.textContent = t('rotatePhone');
+fitStage();
 
 async function boot() {
   const fonts = document.fonts

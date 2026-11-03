@@ -14,6 +14,7 @@ import { Input } from './ui/input';
 import { Hud, Marker } from './ui/hud';
 import { Panel } from './ui/panel';
 import { mulberry32 } from './core/noise';
+import { view } from './core/view';
 
 const SALVAGE_TIME = 2.5, SALVAGE_RADIUS = 9.5, SALVAGE_MAX_SPEED = 3.5;
 const EXTRACT_TIME = 3, EXTRACT_MAX_SPEED = 6, DRIFT_LOSE_TIME = 4;
@@ -83,7 +84,7 @@ export class Game {
   }
 
   resize() {
-    const w = window.innerWidth, h = window.innerHeight;
+    const w = view.w, h = view.h;
     // keep the pixel count phone-friendly: the water shader runs on every pixel
     const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(2.4e6 / (w * h)));
     this.renderer.setPixelRatio(dpr);
@@ -209,7 +210,7 @@ export class Game {
         const still = s.speed < SALVAGE_MAX_SPEED;
         if (still) sp.progress += sdt / SALVAGE_TIME;
         const p = new THREE.Vector3(sp.x, 4, sp.z).project(this.camera);
-        this.hud.setSalvage({ x: (p.x * 0.5 + 0.5) * window.innerWidth, y: (-p.y * 0.5 + 0.5) * window.innerHeight }, Math.min(1, sp.progress), still ? t('salvaging') : t('holdStill'));
+        this.hud.setSalvage({ x: (p.x * 0.5 + 0.5) * view.w, y: (-p.y * 0.5 + 0.5) * view.h }, Math.min(1, sp.progress), still ? t('salvaging') : t('holdStill'));
         if (sp.progress >= 1) { this.hud.setSalvage(null, 0, ''); this.salvage(active); }
       } else this.hud.setSalvage(null, 0, '');
 
@@ -273,7 +274,7 @@ export class Game {
         .map((p) => ({ p, d: Math.hypot(p.x - s.x, p.z - s.z) }))
         .sort((a, b) => a.d - b.d).slice(0, 3)
         .forEach(({ p, d }) => markers.push({ pos: new THREE.Vector3(p.x, 2, p.z), kind: 'spot', label: `${Math.round(d)}m` }));
-      this.hud.setMarkers(markers, this.camera, window.innerWidth, window.innerHeight);
+      this.hud.setMarkers(markers, this.camera, view.w, view.h);
       this.hud.setStats(s.fuel / s.fuelMax, this.hold.value(), weight, this.world.spots.filter((p) => !p.looted).length, this.hold.pending().length);
     }
     this.hud.tick(dt);

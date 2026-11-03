@@ -5,6 +5,7 @@ import { newUid } from '../inventory/grid';
 import { ITEMS, ItemKind, itemName } from '../inventory/items';
 import { MAPS, MapDef } from '../world/maps';
 import { inkFor } from './panel';
+import { view } from '../core/view';
 
 const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, parent?: HTMLElement, html = '') => {
   const e = document.createElement(tag);
@@ -95,7 +96,7 @@ export class Hub {
   // ---------------------------------------------------------------- dock editor
   private renderDock() {
     const L = this.layout;
-    const byH = (window.innerHeight - 130) / (DECK_H + 1.5);
+    const byH = (view.h - 130) / (DECK_H + 1.5);
     this.cs = Math.round(Math.max(28, Math.min(54, byH)));
     const cs = this.cs;
     const body = h('div', 'dock', this.main);

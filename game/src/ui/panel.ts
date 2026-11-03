@@ -3,6 +3,7 @@
 import { t } from '../i18n/zh';
 import { Hold, Item, Container, PILE_CAP, iw, ih } from '../inventory/hold';
 import { itemName } from '../inventory/items';
+import { view } from '../core/view';
 
 const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, parent?: HTMLElement, html = '') => {
   const e = document.createElement(tag);
@@ -79,8 +80,8 @@ export class Panel {
   /** Cell size so the whole hold fits a landscape phone without scrolling where possible. */
   private layout() {
     const n = this.hold.containers.length;
-    const byH = (window.innerHeight - 150) / 3.9;
-    const byW = (window.innerWidth - 300) / (n * 3.6);
+    const byH = (view.h - 150) / 3.9;
+    const byW = (view.w - 300) / (n * 3.6);
     this.cs = Math.round(Math.max(26, Math.min(52, byH, byW)));
     this.wrap.style.setProperty('--cs', `${this.cs}px`);
   }

@@ -1,3 +1,5 @@
+import { view, toStage } from '../core/view';
+
 // Floating virtual stick on the left of the screen, plus WASD / arrow keys on desktop.
 export class Input {
   x = 0;
@@ -25,15 +27,16 @@ export class Input {
 
     layer.addEventListener('pointerdown', (e) => {
       if (!this.enabled || this.pid !== null) return;
-      if (e.clientX > window.innerWidth * 0.6) return;
+      const p = toStage(e.clientX, e.clientY);
+      if (p.x > view.w * 0.6) return;
       this.pid = e.pointerId;
       layer.setPointerCapture(e.pointerId);
-      this.ox = e.clientX; this.oy = e.clientY;
+      this.ox = p.x; this.oy = p.y;
       this.base.style.left = `${this.ox}px`; this.base.style.top = `${this.oy}px`;
       this.base.classList.add('active');
-      this.move(e.clientX, e.clientY);
+      this.move(p.x, p.y);
     });
-    layer.addEventListener('pointermove', (e) => { if (e.pointerId === this.pid) this.move(e.clientX, e.clientY); });
+    layer.addEventListener('pointermove', (e) => { if (e.pointerId === this.pid) { const p = toStage(e.clientX, e.clientY); this.move(p.x, p.y); } });
     const end = (e: PointerEvent) => { if (e.pointerId === this.pid) { this.pid = null; this.sx = this.sz = 0; this.restStick(); } };
     layer.addEventListener('pointerup', end);
     layer.addEventListener('pointercancel', end);
