@@ -11,7 +11,7 @@ function card(parent: HTMLElement, cls: string, html: string) {
   return wrap;
 }
 
-export interface RunResult { win: boolean; sunk?: boolean; kept: Item[]; lostCount: number; lifetime: number }
+export interface RunResult { win: boolean; sunk?: boolean; kept: Item[]; lostCount: number; lifetime: number; xp: number; levelUp: number | null }
 
 export function showResult(parent: HTMLElement, r: RunResult, onAgain: () => void) {
   const groups = new Map<string, { name: string; n: number; v: number; rare: boolean }>();
@@ -30,6 +30,8 @@ export function showResult(parent: HTMLElement, r: RunResult, onAgain: () => voi
     ${r.lostCount ? `<p class="lost">${t('lost')} ${r.lostCount}</p>` : ''}
     <div class="totals"><span>${t('total')}</span><b>${total}</b></div>
     <div class="totals small"><span>${t('lifetime')}</span><b>${r.lifetime}</b></div>
+    <div class="totals small xp"><span>${t('xpGain')}</span><b>+${r.xp}</b></div>
+    ${r.levelUp ? `<p class="lvup">${t('levelUp')} ${t('lv')} ${r.levelUp}</p>` : ''}
     <button type="button" class="btn-primary">${t('backToCamp')}</button>`);
   w.querySelector('button')!.addEventListener('click', () => { w.remove(); onAgain(); });
 }

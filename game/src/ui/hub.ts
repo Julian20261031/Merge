@@ -1,4 +1,5 @@
-// Between runs: pick where to sail, refit the ship layout at the dock, look over what you have brought home.
+// The camp main screen over the calm anchorage: captain card, activities, dock / stash, and the big "set sail" button.
+// Dock, stash and the sea chart open as sheets over the same backdrop.
 import { t, StrKey } from '../i18n/zh';
 import { Layout, Placed, MODS, ModType, DECK_W, DECK_H, pw, ph } from '../inventory/modules';
 import { newUid } from '../inventory/grid';
@@ -6,6 +7,8 @@ import { ITEMS, ItemKind, itemName } from '../inventory/items';
 import { MAPS, MapDef } from '../world/maps';
 import { inkFor } from './panel';
 import { view } from '../core/view';
+import { levelOf } from '../core/progress';
+import { AVATAR, ICONS } from './icons';
 
 const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, parent?: HTMLElement, html = '') => {
   const e = document.createElement(tag);
@@ -14,37 +17,47 @@ const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, parent?: 
   parent?.appendChild(e);
   return e;
 };
+const btn = (cls: string, parent: HTMLElement, html: string, on: () => void) => {
+  const b = h('button', cls, parent, html) as HTMLButtonElement;
+  b.type = 'button';
+  b.addEventListener('click', on);
+  return b;
+};
 const MOD_COLOR: Record<ModType, string> = { cannon: '#5d6764', gun: '#8c3b28', armor: '#2b5c9e', cargo: '#b89668', fuel: '#a8402a', engine: '#3a3833', safe: '#d6a92a' };
 const enemyList = (m: MapDef) => (Object.keys(m.enemies) as (keyof MapDef['enemies'])[]).filter((k) => m.enemies[k] > 0).map((k) => `${t(`enemy_${k}` as StrKey)}×${m.enemies[k]}`).join(' ') || t('noEnemies');
 const level = (n: number) => t((['low', 'mid', 'high'] as StrKey[])[Math.max(0, Math.min(2, n))]);
+const pips = (n: number) => `<i class="pips">${[1, 2, 3].map((k) => `<b class="${k <= n ? 'on' : ''}"></b>`).join('')}</i>`;
 
-type Tab = 'sail' | 'dock' | 'stash';
+type Sheet = 'maps' | 'dock' | 'stash' | null;
+export interface Profile { xp: number; lifetime: number; mapId: string }
 
 export class Hub {
   root: HTMLElement;
   onDepart: ((m: MapDef) => void) | null = null;
   onSave: (() => void) | null = null;
-  private tab: Tab = 'sail';
+  onPickMap: ((m: MapDef) => void) | null = null;
+  private sheet: Sheet = null;
+  private home: HTMLElement;
+  private sheetEl: HTMLElement;
+  private sheetTitle: HTMLElement;
   private main: HTMLElement;
-  private totalEl: HTMLElement;
-  private navBtns = new Map<Tab, HTMLButtonElement>();
+  private toastEl: HTMLElement;
+  private toastTimer = 0;
   private cs = 40;
   private drag: { p: Placed; isNew: boolean; ghost: HTMLElement; offX: number; offY: number; sx: number; sy: number; t0: number; moved: boolean; pid: number } | null = null;
   private deckEl: HTMLElement | null = null;
   private hl: HTMLElement;
 
-  constructor(parent: HTMLElement, private layout: Layout, private stash: Record<string, number>, private lifetime: () => number) {
+  constructor(parent: HTMLElement, private layout: Layout, private stash: Record<string, number>, private profile: () => Profile) {
     this.root = h('div', 'hub', parent);
-    const head = h('header', 'hub-head', this.root, `<b>${t('hubTitle')}</b><small>${t('hubSub')}</small>`);
-    this.totalEl = h('span', 'hub-total', head);
-    const nav = h('nav', 'hub-nav', this.root);
-    for (const [k, label] of [['sail', 'tabSail'], ['dock', 'tabDock'], ['stash', 'tabStash']] as [Tab, StrKey][]) {
-      const b = h('button', '', nav, t(label)) as HTMLButtonElement;
-      b.type = 'button';
-      b.addEventListener('click', () => { this.tab = k; this.render(); });
-      this.navBtns.set(k, b);
-    }
-    this.main = h('main', 'hub-main', this.root);
+    this.home = h('div', 'home', this.root);
+    const sh = h('div', 'sheet', this.root);
+    this.sheetEl = sh;
+    const bar = h('header', 'sheet-head', sh);
+    btn('btn-back', bar, `${ICONS.back}<span>${t('back')}</span>`, () => this.open(null));
+    this.sheetTitle = h('b', '', bar);
+    this.main = h('main', 'sheet-main', sh);
+    this.toastEl = h('div', 'toast hub-toast', this.root);
     this.hl = h('div', 'drop-hl', document.body);
     window.addEventListener('pointermove', (e) => this.onMove(e));
     window.addEventListener('pointerup', (e) => this.onUp(e));
@@ -52,30 +65,68 @@ export class Hub {
     window.addEventListener('resize', () => { if (this.root.style.display !== 'none') this.render(); });
   }
 
-  show(tab?: Tab) { if (tab) this.tab = tab; this.root.style.display = ''; this.render(); }
+  show() { this.sheet = null; this.root.style.display = ''; this.render(); }
   hide() { this.root.style.display = 'none'; }
+  open(s: Sheet) { this.sheet = s; this.render(); }
+
+  private toast(msg: string) {
+    this.toastEl.textContent = msg;
+    this.toastEl.classList.add('show');
+    clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => this.toastEl.classList.remove('show'), 1800);
+  }
+
+  private get map() { return MAPS.find((m) => m.id === this.profile().mapId) ?? MAPS[0]; }
 
   render() {
-    this.totalEl.innerHTML = `${t('totalValue')} <b>${this.lifetime().toLocaleString('en-US')}</b>`;
-    this.navBtns.forEach((b, k) => b.classList.toggle('on', k === this.tab));
+    this.renderHome();
+    this.sheetEl.classList.toggle('open', !!this.sheet);
+    this.home.classList.toggle('dim', !!this.sheet);
     this.main.innerHTML = '';
     this.deckEl = null;
-    if (this.tab === 'sail') this.renderSail();
-    else if (this.tab === 'dock') this.renderDock();
+    if (!this.sheet) return;
+    this.sheetTitle.textContent = t(this.sheet === 'maps' ? 'chartTitle' : this.sheet === 'dock' ? 'tabDock' : 'tabStash');
+    if (this.sheet === 'maps') this.renderMaps();
+    else if (this.sheet === 'dock') this.renderDock();
     else this.renderStash();
   }
 
-  private renderSail() {
+  private renderHome() {
+    const H = this.home, P = this.profile(), L = levelOf(P.xp), m = this.map;
+    H.innerHTML = '';
+    // top left: captain
+    const me = h('section', 'me', H);
+    h('div', 'me-face', me, `${AVATAR}<b>${L.lv}</b>`);
+    const info = h('div', 'me-info', me);
+    h('div', 'me-name', info, `${t('captainName')}<small>${t('lv')} ${L.lv}</small>`);
+    h('div', 'me-xp', info, `<i style="width:${(L.into / L.need) * 100}%"></i><span>${L.into} / ${L.need}</span>`);
+    h('div', 'me-total', info, `${ICONS.coin}<span>${t('totalValue')}</span><b>${P.lifetime.toLocaleString('en-US')}</b>`);
+    // top right: activities (not built yet)
+    const ev = h('nav', 'events', H);
+    for (const [icon, key] of [['task', 'evDaily'], ['flag', 'evExpedition'], ['tent', 'evCamp'], ['bell', 'evNews']] as [keyof typeof ICONS, StrKey][]) {
+      btn('ev', ev, `<i>${ICONS[icon]}</i><span>${t(key)}</span><em>${ICONS.lock}</em>`, () => this.toast(`${t(key)} · ${t('comingSoon')}`));
+    }
+    // bottom left: dock and stash
+    const left = h('nav', 'home-left', H);
+    btn('sq', left, `<i>${ICONS.wrench}</i><span>${t('tabDock')}</span>`, () => this.open('dock'));
+    const n = Object.values(this.stash).reduce((a, b) => a + b, 0);
+    btn('sq', left, `<i>${ICONS.crate}</i><span>${t('tabStash')}</span>${n ? `<em>${n}</em>` : ''}`, () => this.open('stash'));
+    // bottom right: where to, and go
+    const go = h('div', 'home-go', H);
+    btn('sea-chip', go, `<small>${t('area')}</small><b>${t(m.name)}</b>${pips(m.danger)}${ICONS.swap}`, () => this.open('maps'));
+    if (!this.layout.count('cargo')) h('p', 'warn', go, t('noCargoWarn'));
+    btn('btn-go', go, `<b>${t('setSail')}</b><small>${t('setSailSub')}</small>${ICONS.helm}`, () => this.onDepart?.(m));
+  }
+
+  private renderMaps() {
     const wrap = h('div', 'maps', this.main);
-    if (!this.layout.count('cargo')) h('p', 'warn', this.main, t('noCargoWarn'));
+    const cur = this.map;
     MAPS.forEach((m, i) => {
-      const c = h('section', `map-card d${m.danger}`, wrap);
-      h('h2', '', c, t(m.name));
+      const c = h('section', `map-card d${m.danger}${m === cur ? ' on' : ''}`, wrap);
+      h('h2', '', c, `${t(m.name)}${pips(m.danger)}`);
       h('p', '', c, t(m.desc));
       h('dl', '', c, `<dt>${t('richness')}</dt><dd>${level(i)}</dd><dt>${t('danger')}</dt><dd>${level(m.danger - 1)}<small>${enemyList(m)}</small></dd><dt>${t('area')}</dt><dd>${[t('small'), t('mid'), t('big')][i]}</dd>`);
-      const b = h('button', 'btn-primary', c, t('depart')) as HTMLButtonElement;
-      b.type = 'button';
-      b.addEventListener('click', () => this.onDepart?.(m));
+      btn('btn-primary', c, m === cur ? t('picked') : t('pick'), () => { this.onPickMap?.(m); this.open(null); });
     });
   }
 
@@ -97,7 +148,7 @@ export class Hub {
   // ---------------------------------------------------------------- dock editor
   private renderDock() {
     const L = this.layout;
-    const byH = (view.h - 130) / (DECK_H + 1.5);
+    const byH = (view.h - 110) / (DECK_H + 1.5);
     this.cs = Math.round(Math.max(28, Math.min(54, byH)));
     const cs = this.cs;
     const body = h('div', 'dock', this.main);

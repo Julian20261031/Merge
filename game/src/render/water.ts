@@ -11,6 +11,9 @@ const GW = ([[0.35, 1, 34, 0.75], [-0.55, 1, 21, 0.4], [1, 0.3, 12, 0.2], [-0.2,
 const MAX_AMP = GW.reduce((s, g) => s + g.A, 0);
 
 let CALM: Calm[] = [];
+/** Overall sea state: 1 = open water, lower for the sheltered camp anchorage. */
+let SEA = 1;
+export function setSeaState(k: number) { SEA = k; }
 export function setCalmZones(z: Calm[]) { CALM = z; }
 
 function calmFactor(x: number, z: number): number {
@@ -26,13 +29,13 @@ function calmFactor(x: number, z: number): number {
   return 0.22 + 0.78 * t * t * (3 - 2 * t);
 }
 /** Surface height at a world point (ignores the small horizontal Gerstner shift). */
-export const waveH = (x: number, z: number, t: number) => calmFactor(x, z) * GW.reduce((s, g) => s + g.A * Math.sin(g.k * (g.dx * x + g.dz * z) - g.w * t), 0);
+export const waveH = (x: number, z: number, t: number) => SEA * calmFactor(x, z) * GW.reduce((s, g) => s + g.A * Math.sin(g.k * (g.dx * x + g.dz * z) - g.w * t), 0);
 
 const N_CALM = 8;
 export const N_TRAIL = 28;
 export const TRAIL_LIFE = 5.6;
 const GLSL_COMMON = `
-  uniform float uTime; uniform vec4 uR[${N_CALM}]; uniform float uA[${N_CALM}];
+  uniform float uTime, uSea; uniform vec4 uR[${N_CALM}]; uniform float uA[${N_CALM}];
   float sdb(vec2 p, vec2 b){ vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
   float roofDist(vec2 p){ float m = 1e3; for (int i = 0; i < ${N_CALM}; i++) { vec2 d = p - uR[i].xy; float c = cos(uA[i]), s = sin(uA[i]); m = min(m, sdb(vec2(c * d.x - s * d.y, s * d.x + c * d.y), uR[i].zw)); } return m; }`;
 const GW_GLSL = GW.map((g) => `gw(vec2(${g.dx.toFixed(4)}, ${g.dz.toFixed(4)}), ${g.k.toFixed(4)}, ${g.A.toFixed(3)}, ${g.w.toFixed(4)}, p, off, nrm);`).join('\n');
@@ -42,7 +45,7 @@ export function createWater() {
   const geo = new THREE.PlaneGeometry(SIZE, SIZE, SEGS, SEGS);
   geo.rotateX(-Math.PI / 2);
   const uniforms = {
-    uTime: { value: 0 },
+    uTime: { value: 0 }, uSea: { value: 1 },
     uR: { value: Array.from({ length: N_CALM }, () => new THREE.Vector4(1e4, 1e4, 0.1, 0.1)) },
     uA: { value: new Array(N_CALM).fill(0) },
     uFlow: { value: new THREE.Vector2(0, 0) },
@@ -66,7 +69,7 @@ export function createWater() {
       void main(){
         vec4 w = modelMatrix * vec4(position, 1.0);
         vec2 p = w.xz;
-        float at = 0.22 + 0.78 * smoothstep(1.0, 14.0, roofDist(p));
+        float at = uSea * (0.22 + 0.78 * smoothstep(1.0, 14.0, roofDist(p)));
         vec3 off = vec3(0.0), nrm = vec3(0.0, 1.0, 0.0);
         ${GW_GLSL}
         w.xyz += off * at;
@@ -85,7 +88,7 @@ export function createWater() {
         vec3 n = normalize(vN);
         vec3 L = normalize(vec3(-0.45, 0.75, -0.35)), V = normalize(cameraPosition - vW);
         float g = clamp(vn2(p * 0.006 + 11.0) * 1.2 - 0.1, 0.0, 1.0);
-        float hn = clamp(vH / ${MAX_AMP.toFixed(2)} * 0.5 + 0.5, 0.0, 1.0);
+        float hn = clamp(vH / (${MAX_AMP.toFixed(2)} * max(uSea, 0.2)) * 0.5 + 0.5, 0.0, 1.0);
         vec3 trough = mix(uDeep * 1.15, uDeep * 0.85, g);
         vec3 crest = mix(uMid * 1.15 + vec3(0.01, 0.03, 0.02), uMid, g * 0.6);
         vec3 col = mix(trough, crest, smoothstep(0.2, 0.9, hn));
@@ -111,7 +114,7 @@ export function createWater() {
         col = mix(col, col * 0.75 + 0.03 * vec3(sin(ph), sin(ph + 2.1), sin(ph + 4.2)) + 0.01, oil * 0.7);
         col = mix(col, vec3(1.0, 0.94, 0.8), sp * 0.1 * (1.0 - oil));
         vec2 fp = p - uFlow * uTime * 0.4;
-        float cap = smoothstep(0.86, 0.94, hn) * smoothstep(0.66, 0.8, 0.6 * vn2(fp * 0.45) + 0.4 * vn2(fp * 1.1 + 4.0));
+        float cap = uSea * uSea * smoothstep(0.86, 0.94, hn) * smoothstep(0.66, 0.8, 0.6 * vn2(fp * 0.45) + 0.4 * vn2(fp * 1.1 + 4.0));
         float streak = smoothstep(0.7, 0.76, vn2(vec2(dot(fp, vec2(0.94, -0.33)) * 0.1, dot(fp, vec2(0.33, 0.94)) * 0.7))) * 0.2;
         col = mix(col, uFoam, max(cap * 0.4, streak * 0.5) * (1.0 - oil) * (1.0 - sh * 0.7));
         // wake: every trail point is a ring of foam that keeps spreading where it was laid down,
@@ -155,6 +158,7 @@ export function createWater() {
         if (tr) { uniforms.uTrail.value[i].set(tr.x, tr.z, t - tr.born, tr.k); uniforms.uTrailF.value[i].set(tr.fx, tr.fz); } else uniforms.uTrail.value[i].set(1e4, 1e4, 99, 0);
       }
       uniforms.uTime.value = t;
+      uniforms.uSea.value = SEA;
       mesh.position.set(Math.round(center.x / CELL) * CELL, 0, Math.round(center.z / CELL) * CELL);
       uniforms.uBoat.value.set(boat.x, boat.z);
       uniforms.uFwd.value.set(boat.fx, boat.fz);

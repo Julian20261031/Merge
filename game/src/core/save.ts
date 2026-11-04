@@ -7,10 +7,12 @@ export interface SaveData {
   stash: Record<string, number>;
   lifetime: number;
   runs: number;
+  xp: number;
+  mapId: string;
 }
 
 export function loadSave(): SaveData {
-  const fresh: SaveData = { layout: null, owned: null, stash: {}, lifetime: 0, runs: 0 };
+  const fresh: SaveData = { layout: null, owned: null, stash: {}, lifetime: 0, runs: 0, xp: 0, mapId: 'shoal' };
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return fresh;

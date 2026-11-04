@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { t } from './i18n/zh';
 import { FOG_COLOR, FOG_NEAR, FOG_FAR } from './render/toon';
-import { createWater, setCalmZones, waveH, N_TRAIL } from './render/water';
+import { createWater, setCalmZones, setSeaState, waveH, N_TRAIL } from './render/water';
 import { buildWorld, World } from './world/map';
 import { MapDef, MAPS } from './world/maps';
 import { buildBoat, BoatModel } from './boat/model';
@@ -24,7 +24,7 @@ const SALVAGE_TIME = 2.5, SALVAGE_RADIUS = 9.5, SALVAGE_MAX_SPEED = 3.5;
 const EXTRACT_TIME = 3, EXTRACT_MAX_SPEED = 6, DRIFT_LOSE_TIME = 4;
 const TRAIL_EVERY = 0.2;
 
-export interface RunEnd { win: boolean; reason: 'win' | 'fuel' | 'sunk'; kept: Item[]; lost: number }
+export interface RunEnd { win: boolean; reason: 'win' | 'fuel' | 'sunk'; kept: Item[]; lost: number; kills: number }
 
 export class Game {
   renderer: THREE.WebGLRenderer;
@@ -56,6 +56,8 @@ export class Game {
   hull = PLAYER_HULL;
   hullMax = PLAYER_HULL;
   shake = 0;
+  kills = 0;
+  private touch: HTMLElement;
   private last = 0;
 
   constructor(canvas: HTMLCanvasElement, ui: HTMLElement) {
@@ -69,7 +71,7 @@ export class Game {
     sun.position.set(-40, 70, -30);
     this.scene.add(sun, sun.target, this.water.mesh, this.level);
 
-    const touch = document.createElement('div');
+    const touch = this.touch = document.createElement('div');
     touch.className = 'touch-layer';
     ui.appendChild(touch);
     this.input = new Input(touch);
@@ -114,6 +116,8 @@ export class Game {
     this.rand = mulberry32(seed ^ 0x9e3779b9);
     this.world = buildWorld(this.level, seed, map);
     setCalmZones(this.world.calm);
+    setSeaState(play ? 1 : 0.32);
+    this.world.dockRing.visible = play;
     this.boat = buildBoat(layout);
     this.level.add(this.boat.group);
     const puff = new THREE.IcosahedronGeometry(1, 0);
@@ -128,6 +132,7 @@ export class Game {
     this.layout = layout;
     this.hull = this.hullMax = PLAYER_HULL;
     this.shake = 0;
+    this.kills = 0;
     this.combat.reset(this.level, layout, play ? map.enemies : { rammer: 0, harpoon: 0, gunboat: 0 }, this.world.radius, this.world.dock, this.world.roofs, this.rand);
     this.hasLeftDock = false;
     this.extractT = 0;
@@ -140,6 +145,7 @@ export class Game {
     this.hud.setSalvage(null, 0, '');
     this.state = play ? 'play' : 'idle';
     this.hud.show(play);
+    this.touch.style.display = play ? '' : 'none';
   }
 
   /** After a refit at the dock: swap the boat model without regenerating the sea. */
@@ -208,6 +214,7 @@ export class Game {
     return itemName(it.def.kind);
   }
   private onKill(e: Enemy) {
+    this.kills++;
     this.hud.toast(`${t('killed')}${t(`enemy_${e.kind}` as StrKey)}`);
     this.world.addSpot(e.s.x, e.s.z, 0.75 + this.rand() * 0.25);
   }
@@ -233,7 +240,7 @@ export class Game {
     this.hud.setSalvage(null, 0, '');
     setTimeout(() => {
       this.hud.show(false);
-      this.onRunEnd?.({ win, reason, kept, lost: before - kept.length });
+      this.onRunEnd?.({ win, reason, kept, lost: before - kept.length, kills: this.kills });
     }, win ? 600 : 1400);
   }
 
@@ -381,10 +388,11 @@ export class Game {
     this.last = now;
     if (document.hidden || !this.world) return;
     if (this.state === 'idle') {
-      // camp backdrop: the boat idles at the dock while the camera drifts
+      // camp backdrop: the boat rides at anchor on flat water while the camera slowly circles it
       this.update(dt);
-      this.camera.position.set(this.s.x + Math.sin(this.T * 0.05) * 24 - 30, 30, this.s.z + 46);
-      this.camera.lookAt(this.s.x - 22, 0, this.s.z + 2);
+      const a = 1.15 + Math.sin(this.T * 0.04) * 0.3, R = 56;
+      this.camera.position.set(this.s.x + Math.sin(a) * R, 26, this.s.z + Math.cos(a) * R);
+      this.camera.lookAt(this.s.x, 1, this.s.z - 2);
     } else this.update(dt);
     this.renderer.render(this.scene, this.camera);
   }

@@ -3,7 +3,8 @@ import { buildTextures, redrawTextTextures, FD } from './render/textures';
 import { hs } from './core/noise';
 import { loadSave, writeSave } from './core/save';
 import { Layout } from './inventory/modules';
-import { MAPS } from './world/maps';
+import { CAMP_SEA } from './world/maps';
+import { levelOf, runXp } from './core/progress';
 import { Game } from './game';
 import { Hub } from './ui/hub';
 import { showResult } from './ui/screens';
@@ -34,24 +35,29 @@ async function boot() {
 
   const ui = document.getElementById('ui')!;
   const game = new Game(document.getElementById('gl') as HTMLCanvasElement, ui);
-  const hub = new Hub(ui, layout, save.stash, () => save.lifetime);
-  const toCamp = () => { game.load(MAPS[0], layout, false, 7); hub.show('sail'); };
+  const hub = new Hub(ui, layout, save.stash, () => save);
+  const toCamp = () => { game.load(CAMP_SEA, layout, false, 7); hub.show(); };
 
+  hub.onPickMap = (m) => { save.mapId = m.id; persist(); };
   hub.onSave = () => { persist(); game.rebuildBoat(layout); };
   hub.onDepart = (map) => { hub.hide(); persist(); game.load(map, layout, true); };
   game.onRunEnd = (r) => {
     for (const it of r.kept) save.stash[it.def.kind] = (save.stash[it.def.kind] ?? 0) + 1;
-    save.lifetime += r.kept.reduce((s, i) => s + i.def.value, 0);
+    const value = r.kept.reduce((s, i) => s + i.def.value, 0);
+    const xp = runXp(value, r.win, r.kills), lv0 = levelOf(save.xp).lv;
+    save.lifetime += value;
+    save.xp += xp;
     save.runs++;
     persist();
-    showResult(ui, { win: r.win, sunk: r.reason === 'sunk', kept: r.kept, lostCount: r.lost, lifetime: save.lifetime }, toCamp);
+    const lv1 = levelOf(save.xp).lv;
+    showResult(ui, { win: r.win, sunk: r.reason === 'sunk', kept: r.kept, lostCount: r.lost, lifetime: save.lifetime, xp, levelUp: lv1 > lv0 ? lv1 : null }, toCamp);
   };
 
-  game.load(MAPS[0], layout, false, 7);
+  game.load(CAMP_SEA, layout, false, 7);
   await fonts;
   redrawTextTextures();
   document.getElementById('loading')?.remove();
-  hub.show('sail');
+  hub.show();
   (window as unknown as { game: Game; hub: Hub; layout: Layout }).game = game;
   Object.assign(window, { hub, layout });
 }

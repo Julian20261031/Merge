@@ -15,3 +15,6 @@ export const MAPS: MapDef[] = [
   { id: 'oldtown', name: 'map_oldtown', desc: 'map_oldtown_d', radius: 175, roofs: 9, spots: 13, rich: [0.15, 0.8], danger: 2, enemies: { rammer: 2, harpoon: 2, gunboat: 1 } },
   { id: 'deep', name: 'map_deep', desc: 'map_deep_d', radius: 210, roofs: 6, spots: 14, rich: [0.45, 1], danger: 3, enemies: { rammer: 3, harpoon: 2, gunboat: 3 } },
 ];
+
+/** The sheltered anchorage behind the camp screens: no loot, no raiders, flat water. */
+export const CAMP_SEA: MapDef = { id: 'camp', name: 'hubTitle', desc: 'hubTitle', radius: 120, roofs: 4, spots: 0, rich: [0, 0], danger: 1, enemies: { rammer: 0, harpoon: 0, gunboat: 0 } };
