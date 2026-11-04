@@ -7,6 +7,7 @@ export const ICONS = {
   lock: I('<rect x="5" y="11" width="14" height="10" rx="1.5" fill="currentColor" stroke="none"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
   coin: I('<circle cx="12" cy="12" r="8"/><path d="M9 9.5h6M9 14.5h6M12 7v10"/>'),
   swap: I('<path d="M7 9l5-4 5 4M7 15l5 4 5-4"/>'),
+  ship: I('<path d="M2.5 14.5h19l-2.6 4.6c-.3.6-1 .9-1.6.9H6.7c-.6 0-1.3-.3-1.6-.9z"/><path d="M5.5 14.5v-4h8l2 4M8 10.5V7h3.5v3.5M13 4v6.5"/><path d="M13 4.5l4 1.6-4 1.4"/>'),
   wrench: I('<path d="M14.5 5.5a4 4 0 0 0-5 5L4 16l4 4 5.5-5.5a4 4 0 0 0 5-5l-2.6 2.6-2.8-.6-.6-2.8z"/>'),
   crate: I('<path d="M3.5 8.5L12 4l8.5 4.5v9L12 22l-8.5-4.5z"/><path d="M3.5 8.5L12 13l8.5-4.5M12 13v9M7.5 6.3l8.5 4.6"/>'),
   task: I('<path d="M7 3.5h10l1 2v15l-1 .5H7l-1-.5v-15z"/><path d="M9 9h6M9 13h6M9 17h3.5"/>'),

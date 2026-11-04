@@ -3,13 +3,13 @@ import * as THREE from 'three';
 import { TX } from '../render/textures';
 import { toon, part, box, cyl, dent, ringGeo, offsetPoly } from '../render/toon';
 import { hs } from '../core/noise';
-import { DECK_W, DECK_H, Layout, Placed, pw, ph, sideOf } from '../inventory/modules';
+import { Layout, Placed, pw, ph } from '../inventory/modules';
+import { HullDef, DECK, CELL, hullGeom, hullOutline, cellCenter as cc } from './hulls';
 
-export const HULL2D = [[0, -205], [36, -172], [64, -128], [79, -80], [84, 0], [82, 90], [76, 140], [62, 160], [-62, 160], [-76, 140], [-82, 90], [-84, 0], [-79, -80], [-64, -128], [-36, -172]];
-export const DECK = 1.4, CELL = 4, GX = -6, GZ = -11;
+export { DECK, CELL };
 const ROPE = 0x8a7550, TYRE = 0x2b2a27;
 
-export const cellCenter = (c: number, r: number, w: number, h: number) => new THREE.Vector3(GX + (c + w / 2) * CELL, DECK, GZ + (r + h / 2) * CELL);
+export const cellCenter = (H: HullDef, c: number, r: number, w: number, h: number) => { const p = cc(H, c, r, w, h); return new THREE.Vector3(p.x, p.y, p.z); };
 
 export function hullGeo(pts: number[][], s: number, depth: number) {
   const sh = new THREE.Shape();
@@ -26,25 +26,29 @@ export interface BoatModel {
   props: THREE.Object3D[];
   flag: { m: THREE.Mesh; base: Float32Array; w: number };
   exhaust: THREE.Vector3;
+  gridLines: THREE.LineSegments;
 }
 
 export function buildBoat(layout: Layout): BoatModel {
+  const H = layout.hull, G = hullGeom(H), GX = G.gx, GZ = G.gz;
   const g = new THREE.Group();
   g.rotation.order = 'YXZ';
-  part(g, hullGeo(HULL2D, 0.1, DECK), [toon(0, TX.deck), toon(0, TX.hull)], 0, 0, 0, { outline: 'thick' });
+  const HULLW = hullOutline(H);
+  part(g, hullGeo(HULLW, 1, DECK), [toon(0, TX.deck), toon(0, TX.hull)], 0, 0, 0, { outline: 'thick' });
 
   // deck grid = the backpack
+  let gridLines: THREE.LineSegments;
   {
     const v: number[] = [];
-    for (let i = 0; i <= DECK_W; i++) v.push(GX + i * CELL, DECK + 0.03, GZ, GX + i * CELL, DECK + 0.03, GZ + DECK_H * CELL);
-    for (let j = 0; j <= DECK_H; j++) v.push(GX, DECK + 0.03, GZ + j * CELL, GX + DECK_W * CELL, DECK + 0.03, GZ + j * CELL);
+    for (let i = 0; i <= H.w; i++) v.push(GX + i * CELL, DECK + 0.03, GZ, GX + i * CELL, DECK + 0.03, GZ + H.h * CELL);
+    for (let j = 0; j <= H.h; j++) v.push(GX, DECK + 0.03, GZ + j * CELL, GX + H.w * CELL, DECK + 0.03, GZ + j * CELL);
     const lg = new THREE.BufferGeometry();
     lg.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
-    g.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0xf0e4c8, transparent: true, opacity: 0.45 })));
+    gridLines = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0xf0e4c8, transparent: true, opacity: 0.45 }));
+    g.add(gridLines);
   }
 
   // raised welded gunwale and scavenged railings
-  const HULLW = HULL2D.map(([x, y]) => [x * 0.1, y * 0.1]);
   const RIM_H = 0.6;
   {
     const rim = new THREE.Mesh(ringGeo(offsetPoly(HULLW, -0.02), offsetPoly(HULLW, -0.62), RIM_H), toon(0, TX.rim));
@@ -57,8 +61,8 @@ export function buildBoat(layout: Layout): BoatModel {
       const a = path[i], b = path[(i + 1) % path.length], n = Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2.6));
       for (let k = 0; k < n; k++) pts.push([a[0] + (b[0] - a[0]) * (k / n), a[1] + (b[1] - a[1]) * (k / n)]);
     }
-    const gunPorts = layout.placed.filter((p) => p.type === 'gun' && sideOf(p) !== 0).map((p) => ({ side: sideOf(p), z0: GZ + p.r * CELL - 1.2, z1: GZ + (p.r + ph(p)) * CELL + 1.2 }));
-    const gap = ([x, z]: number[]) => z < -18.5 || (z > 15.5 && Math.abs(x) < 3.2) || gunPorts.some((g) => Math.sign(x) === g.side && z > g.z0 && z < g.z1);
+    const gunPorts = layout.placed.filter((p) => p.type === 'gun' && layout.side(p) !== 0).map((p) => ({ side: layout.side(p), z0: GZ + p.r * CELL - 1.2, z1: GZ + (p.r + ph(p)) * CELL + 1.2 }));
+    const gap = ([x, z]: number[]) => z < G.bowTip + 2 || (z > G.stern - 0.5 && Math.abs(x) < 3.2) || gunPorts.some((g) => Math.sign(x) === g.side && z > g.z0 && z < g.z1);
     const railM = toon(0, TX.steel);
     pts.forEach((p, i) => {
       const q = pts[(i + 1) % pts.length];
@@ -76,41 +80,43 @@ export function buildBoat(layout: Layout): BoatModel {
   }
 
   // lashed blue drums, tyre fenders
-  for (const s of [-1, 1]) {
-    part(g, dent(cyl(1.1, 3.6, 14), 0.12), toon(0, TX.drumBlue), s * 9.4, 0.55, -12.2, { rx: Math.PI / 2, outline: 'mid' });
-    for (const dz of [-0.9, 0.9]) part(g, new THREE.TorusGeometry(1.16, 0.09, 5, 16), toon(ROPE), s * 9.4, 0.55, -12.2 + dz, { outline: false });
+  if (H.drums) for (const s of [-1, 1]) {
+    const dz0 = GZ - 1.2;
+    part(g, dent(cyl(1.1, 3.6, 14), 0.12), toon(0, TX.drumBlue), s * (G.hw + 1), 0.55, dz0, { rx: Math.PI / 2, outline: 'mid' });
+    for (const dz of [-0.9, 0.9]) part(g, new THREE.TorusGeometry(1.16, 0.09, 5, 16), toon(ROPE), s * (G.hw + 1), 0.55, dz0 + dz, { outline: false });
   }
-  for (const [s, z] of [[-1, 4], [-1, 11.2], [1, 4.5], [1, 11.2]]) part(g, new THREE.TorusGeometry(0.85, 0.36, 8, 16), toon(TYRE), s * (z > 10 ? 8.1 : 8.7), 0.85, z, { ry: Math.PI / 2 });
+  for (const [s, z] of [[-1, G.zBot - 9], [-1, G.zBot - 1.8], [1, G.zBot - 8.5], [1, G.zBot - 1.8]]) part(g, new THREE.TorusGeometry(0.85, 0.36, 8, 16), toon(TYRE), s * (G.hw + (z > G.zBot - 3 ? -0.3 : 0.3)), 0.85, z, { ry: Math.PI / 2 });
 
   // bow: scaffold-pipe mast, faded flag, rope coil, wheel-rim anchor
-  part(g, cyl(0.17, 7.6, 8), toon(0, TX.steel), 0.6, DECK + 3.8, -16, { rz: 0.04 });
-  part(g, box(2.6, 0.14, 0.14), toon(0, TX.dark), 0.75, DECK + 5.6, -16, { outline: false });
+  const mz = GZ - 5 * H.bow, rz = GZ - 2.6 * H.bow;
+  part(g, cyl(0.17, 7.6, 8), toon(0, TX.steel), 0.6, DECK + 3.8, mz, { rz: 0.04 });
+  part(g, box(2.6, 0.14, 0.14), toon(0, TX.dark), 0.75, DECK + 5.6, mz, { outline: false });
   const fg = new THREE.PlaneGeometry(3, 1.8, 10, 4);
   fg.translate(1.5, 0, 0);
   const flagMesh = new THREE.Mesh(fg, toon(0, TX.flagMe, { side: THREE.DoubleSide, alphaTest: 0.5 }));
-  flagMesh.position.set(0.75, DECK + 6.6, -16);
+  flagMesh.position.set(0.75, DECK + 6.6, mz);
   g.add(flagMesh);
-  for (let k = 0; k < 3; k++) part(g, new THREE.TorusGeometry(0.9 - k * 0.08, 0.15, 6, 16), toon(ROPE), -2.3, DECK + 0.15 + k * 0.24, -13.6, { rx: Math.PI / 2, outline: k === 2 ? 'thin' : false });
-  part(g, new THREE.TorusGeometry(0.75, 0.24, 6, 14), toon(TYRE), 2.4, DECK + 0.45, -13.4, { rx: 1.2 });
+  for (let k = 0; k < 3; k++) part(g, new THREE.TorusGeometry(0.9 - k * 0.08, 0.15, 6, 16), toon(ROPE), -2.3, DECK + 0.15 + k * 0.24, rz, { rx: Math.PI / 2, outline: k === 2 ? 'thin' : false });
+  part(g, new THREE.TorusGeometry(0.75, 0.24, 6, 14), toon(TYRE), 2.4, DECK + 0.45, rz + 0.2, { rx: 1.2 });
 
   const props: THREE.Object3D[] = [];
   const cargoFill: THREE.Object3D[] = [];
   let exhaust = new THREE.Vector3();
   const boxes = layout.cargoBoxes();
   for (const m of layout.placed) {
-    const res = buildModule(g, m);
+    const res = buildModule(g, m, layout);
     if (res.props) props.push(...res.props);
     if (res.exhaust) exhaust = res.exhaust;
     if (res.fill) cargoFill[boxes.indexOf(m)] = res.fill;
   }
-  return { group: g, cargoFill, props, flag: { m: flagMesh, base: Float32Array.from(fg.attributes.position.array as Float32Array), w: 3 }, exhaust };
+  return { group: g, cargoFill, props, flag: { m: flagMesh, base: Float32Array.from(fg.attributes.position.array as Float32Array), w: 3 }, exhaust, gridLines };
 }
 
 interface ModRes { props?: THREE.Object3D[]; exhaust?: THREE.Vector3; fill?: THREE.Object3D }
 
 /** One deck module at its cells. Side-mounted guns and armour face outward. */
-function buildModule(g: THREE.Group, m: Placed): ModRes {
-  const w = pw(m), h = ph(m), p = cellCenter(m.c, m.r, w, h), side = sideOf(m);
+export function buildModule(g: THREE.Group, m: Placed, layout: Layout): ModRes {
+  const w = pw(m), h = ph(m), p = cellCenter(layout.hull, m.c, m.r, w, h), side = layout.side(m);
   const W = w * CELL, D = h * CELL;
   switch (m.type) {
     case 'cannon': {

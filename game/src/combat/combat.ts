@@ -5,7 +5,8 @@ import { Effects } from './fx';
 import { Enemy, EnemyKind, EnemyApi } from './enemies';
 import { BoatState, forward } from '../boat/physics';
 import { cellCenter, DECK } from '../boat/model';
-import { Layout, Placed, pw, ph, sideOf } from '../inventory/modules';
+import { Layout, Placed, pw, ph } from '../inventory/modules';
+import { HullDef, HULLS, hullGeom } from '../boat/hulls';
 import { Roof } from '../world/map';
 import { waveH } from '../render/water';
 import { t } from '../i18n/zh';
@@ -14,7 +15,6 @@ export const WEAPONS = {
   cannon: { range: 56, arc: 0.44, cool: 4.0, dmg: 40, speed: 70, splash: 3.5, burst: 1, gap: 0 },
   gun: { range: 36, arc: 0.95, cool: 1.6, dmg: 4, speed: 115, splash: 0, burst: 5, gap: 0.12 },
 };
-export const PLAYER_HULL = 120;
 const HARPOON_STEAL_TIME = 3.5, TETHER_SNAP = 60;
 
 interface Mount { p: Placed; kind: 'cannon' | 'gun'; local: THREE.Vector3; dir: THREE.Vector3; cool: number; shots: number }
@@ -40,9 +40,11 @@ function segDist(px: number, pz: number, ax: number, az: number, bx: number, bz:
   const k = Math.max(0, Math.min(1, (wx * vx + wz * vz) / (vx * vx + vz * vz || 1)));
   return Math.hypot(px - (ax + vx * k), pz - (az + vz * k));
 }
+let HULL: HullDef = HULLS.trawler;
+/** Distance from a point to the player's keel line, minus how much wider than the trawler this hull is. */
 export function playerHullDist(s: BoatState, x: number, z: number) {
-  const { fx, fz } = forward(s);
-  return segDist(x, z, s.x + fx * 17, s.z + fz * 17, s.x - fx * 14, s.z - fz * 14);
+  const { fx, fz } = forward(s), g = hullGeom(HULL), f = -g.bowTip - 3.5, b = g.stern - 2;
+  return segDist(x, z, s.x + fx * f, s.z + fz * f, s.x - fx * b, s.z - fz * b) - (g.hw - 8.4);
 }
 
 export class Combat {
@@ -57,6 +59,7 @@ export class Combat {
   private s!: BoatState;
   private boat!: THREE.Object3D;
   private T = 0;
+  private layout!: Layout;
 
   constructor(public hooks: CombatHooks) {}
 
@@ -69,9 +72,11 @@ export class Combat {
     this.projs = [];
     this.disabled.clear();
     this.tether = null;
+    this.layout = layout;
+    HULL = layout.hull;
     this.mounts = layout.placed.filter((p) => p.type === 'cannon' || p.type === 'gun').map((p) => {
-      const side = p.type === 'cannon' ? 0 : sideOf(p);
-      const c = cellCenter(p.c, p.r, pw(p), ph(p));
+      const side = p.type === 'cannon' ? 0 : layout.side(p);
+      const c = cellCenter(layout.hull, p.c, p.r, pw(p), ph(p));
       return { p, kind: p.type as 'cannon' | 'gun', local: new THREE.Vector3(c.x, DECK + 1.1, c.z), dir: side === 0 ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(side, 0, 0), cool: 0, shots: 0 };
     });
     for (const kind of Object.keys(spawn) as EnemyKind[]) {
@@ -91,7 +96,7 @@ export class Combat {
 
   isDisabled(uid: number) { return this.disabled.has(uid); }
   disable(p: Placed, secs: number) {
-    const c = cellCenter(p.c, p.r, pw(p), ph(p));
+    const c = cellCenter(this.layout.hull, p.c, p.r, pw(p), ph(p));
     this.disabled.set(p.uid, { t: secs, local: new THREE.Vector3(c.x, DECK + 1.5, c.z) });
   }
 

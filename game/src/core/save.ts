@@ -9,10 +9,11 @@ export interface SaveData {
   runs: number;
   xp: number;
   mapId: string;
+  hull: string;
 }
 
 export function loadSave(): SaveData {
-  const fresh: SaveData = { layout: null, owned: null, stash: {}, lifetime: 0, runs: 0, xp: 0, mapId: 'shoal' };
+  const fresh: SaveData = { layout: null, owned: null, stash: {}, lifetime: 0, runs: 0, xp: 0, mapId: 'shoal', hull: 'trawler' };
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return fresh;

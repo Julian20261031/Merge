@@ -1,12 +1,9 @@
 // The camp main screen over the calm anchorage: captain card, activities, dock / stash, and the big "set sail" button.
 // Dock, stash and the sea chart open as sheets over the same backdrop.
 import { t, StrKey } from '../i18n/zh';
-import { Layout, Placed, MODS, ModType, DECK_W, DECK_H, pw, ph } from '../inventory/modules';
-import { newUid } from '../inventory/grid';
+import { Layout } from '../inventory/modules';
 import { ITEMS, ItemKind, itemName } from '../inventory/items';
 import { MAPS, MapDef } from '../world/maps';
-import { inkFor } from './panel';
-import { view } from '../core/view';
 import { levelOf } from '../core/progress';
 import { AVATAR, ICONS } from './icons';
 
@@ -23,19 +20,18 @@ const btn = (cls: string, parent: HTMLElement, html: string, on: () => void) => 
   b.addEventListener('click', on);
   return b;
 };
-const MOD_COLOR: Record<ModType, string> = { cannon: '#5d6764', gun: '#8c3b28', armor: '#2b5c9e', cargo: '#b89668', fuel: '#a8402a', engine: '#3a3833', safe: '#d6a92a' };
 const enemyList = (m: MapDef) => (Object.keys(m.enemies) as (keyof MapDef['enemies'])[]).filter((k) => m.enemies[k] > 0).map((k) => `${t(`enemy_${k}` as StrKey)}×${m.enemies[k]}`).join(' ') || t('noEnemies');
 const level = (n: number) => t((['low', 'mid', 'high'] as StrKey[])[Math.max(0, Math.min(2, n))]);
 const pips = (n: number) => `<i class="pips">${[1, 2, 3].map((k) => `<b class="${k <= n ? 'on' : ''}"></b>`).join('')}</i>`;
 
-type Sheet = 'maps' | 'dock' | 'stash' | null;
+type Sheet = 'maps' | 'stash' | null;
 export interface Profile { xp: number; lifetime: number; mapId: string }
 
 export class Hub {
   root: HTMLElement;
   onDepart: ((m: MapDef) => void) | null = null;
-  onSave: (() => void) | null = null;
   onPickMap: ((m: MapDef) => void) | null = null;
+  onRefit: (() => void) | null = null;
   private sheet: Sheet = null;
   private home: HTMLElement;
   private sheetEl: HTMLElement;
@@ -43,10 +39,6 @@ export class Hub {
   private main: HTMLElement;
   private toastEl: HTMLElement;
   private toastTimer = 0;
-  private cs = 40;
-  private drag: { p: Placed; isNew: boolean; ghost: HTMLElement; offX: number; offY: number; sx: number; sy: number; t0: number; moved: boolean; pid: number } | null = null;
-  private deckEl: HTMLElement | null = null;
-  private hl: HTMLElement;
 
   constructor(parent: HTMLElement, private layout: Layout, private stash: Record<string, number>, private profile: () => Profile) {
     this.root = h('div', 'hub', parent);
@@ -58,11 +50,7 @@ export class Hub {
     this.sheetTitle = h('b', '', bar);
     this.main = h('main', 'sheet-main', sh);
     this.toastEl = h('div', 'toast hub-toast', this.root);
-    this.hl = h('div', 'drop-hl', document.body);
-    window.addEventListener('pointermove', (e) => this.onMove(e));
-    window.addEventListener('pointerup', (e) => this.onUp(e));
-    window.addEventListener('pointercancel', (e) => this.onUp(e));
-    window.addEventListener('resize', () => { if (this.root.style.display !== 'none') this.render(); });
+
   }
 
   show() { this.sheet = null; this.root.style.display = ''; this.render(); }
@@ -83,11 +71,9 @@ export class Hub {
     this.sheetEl.classList.toggle('open', !!this.sheet);
     this.home.classList.toggle('dim', !!this.sheet);
     this.main.innerHTML = '';
-    this.deckEl = null;
     if (!this.sheet) return;
-    this.sheetTitle.textContent = t(this.sheet === 'maps' ? 'chartTitle' : this.sheet === 'dock' ? 'tabDock' : 'tabStash');
+    this.sheetTitle.textContent = t(this.sheet === 'maps' ? 'chartTitle' : 'tabStash');
     if (this.sheet === 'maps') this.renderMaps();
-    else if (this.sheet === 'dock') this.renderDock();
     else this.renderStash();
   }
 
@@ -108,7 +94,7 @@ export class Hub {
     }
     // bottom left: dock and stash
     const left = h('nav', 'home-left', H);
-    btn('sq', left, `<i>${ICONS.wrench}</i><span>${t('tabDock')}</span>`, () => this.open('dock'));
+    btn('sq', left, `<i>${ICONS.ship}</i><span>${t('tabDock')}</span>`, () => this.onRefit?.());
     const n = Object.values(this.stash).reduce((a, b) => a + b, 0);
     btn('sq', left, `<i>${ICONS.crate}</i><span>${t('tabStash')}</span>${n ? `<em>${n}</em>` : ''}`, () => this.open('stash'));
     // bottom right: where to, and go
@@ -143,116 +129,5 @@ export class Hub {
     });
     h('div', 'stash-total', box, `<span>${t('value')}</span><b>${total}</b>`);
     h('p', 'note', box, t('stashNote'));
-  }
-
-  // ---------------------------------------------------------------- dock editor
-  private renderDock() {
-    const L = this.layout;
-    const byH = (view.h - 110) / (DECK_H + 1.5);
-    this.cs = Math.round(Math.max(28, Math.min(54, byH)));
-    const cs = this.cs;
-    const body = h('div', 'dock', this.main);
-    body.style.setProperty('--cs', `${cs}px`);
-    // hull with the layout grid
-    const W = DECK_W * cs, H = DECK_H * cs, pad = cs * 0.42, bow = cs * 1.3, tw = W + pad * 2, th = H + pad + bow;
-    const hull = h('div', 'hull', body);
-    hull.style.width = `${tw}px`;
-    hull.style.height = `${th}px`;
-    h('div', 'hull-svg', hull, `<svg width="${tw}" height="${th}" viewBox="0 0 ${tw} ${th}"><path d="M${tw / 2} 2 C ${tw * 0.82} ${bow * 0.55}, ${tw - 3} ${bow}, ${tw - 3} ${bow + H * 0.35} L ${tw - 6} ${th - 4} L 6 ${th - 4} L 3 ${bow + H * 0.35} C 3 ${bow}, ${tw * 0.18} ${bow * 0.55}, ${tw / 2} 2 Z" fill="#a98d66" stroke="#22170f" stroke-width="3"/></svg>`);
-    const deck = h('div', 'grid deck', hull);
-    Object.assign(deck.style, { left: `${pad}px`, top: `${bow}px`, width: `${W}px`, height: `${H}px` });
-    this.deckEl = deck;
-    for (const p of L.placed) {
-      const d = this.modTile(p, false);
-      Object.assign(d.style, { left: `${p.c * cs + 2}px`, top: `${p.r * cs + 2}px` });
-      deck.appendChild(d);
-    }
-    // spare modules + stats
-    const side = h('div', 'dock-side', body);
-    h('p', 'hint', side, t('dockHint'));
-    h('h3', '', side, t('spare'));
-    const pal = h('div', 'palette', side);
-    for (const type of ['cargo', 'fuel', 'cannon', 'gun', 'armor'] as ModType[]) {
-      const n = L.spare(type);
-      if (n <= 0) continue;
-      const cell = h('div', 'pal-cell', pal);
-      const tile = this.modTile({ uid: 0, type, c: 0, r: 0, rot: false }, true);
-      cell.appendChild(tile);
-      h('em', '', cell, `×${n}`);
-    }
-    if (!pal.children.length) h('p', 'note', pal, '—');
-    const weapons = L.count('cannon') + L.count('gun');
-    h('dl', 'stats', side, `<dt>${t('fuelMax')}</dt><dd>${L.fuelMax()}</dd><dt>${t('cargoCells')}</dt><dd>${L.cargoCells()} ${t('cells')}</dd><dt>${t('weapons')}</dt><dd>${weapons}</dd><dt>${t('armor')}</dt><dd>${L.count('armor')}</dd>`);
-    h('div', 'info', side).id = 'dock-info';
-  }
-
-  private modTile(p: Placed, isNew: boolean): HTMLElement {
-    const def = MODS[p.type], cs = this.cs;
-    const d = h('div', `tile mod-tile${def.fixed ? ' fixed' : ''}`);
-    d.style.width = `${pw(p) * cs - 4}px`;
-    d.style.height = `${ph(p) * cs - 4}px`;
-    d.style.background = MOD_COLOR[p.type];
-    d.style.color = inkFor(MOD_COLOR[p.type]);
-    d.innerHTML = `<span>${t(def.key)}</span>`;
-    if (isNew) d.style.position = 'relative';
-    d.addEventListener('pointerdown', (e) => {
-      const info = document.getElementById('dock-info');
-      if (info) info.innerHTML = `<b>${t(def.key)}</b><span>${t(def.desc)}</span>`;
-      if (def.fixed || this.drag) return;
-      e.preventDefault();
-      const r = d.getBoundingClientRect();
-      const placed: Placed = isNew ? { uid: newUid(), type: p.type, c: 0, r: 0, rot: false } : p;
-      const ghost = h('div', 'tile mod-tile ghost', document.body, d.innerHTML);
-      Object.assign(ghost.style, { background: d.style.background, color: d.style.color, width: d.style.width, height: d.style.height });
-      this.drag = { p: placed, isNew, ghost, offX: e.clientX - r.left, offY: e.clientY - r.top, sx: e.clientX, sy: e.clientY, t0: performance.now(), moved: false, pid: e.pointerId };
-      d.classList.add('lifted');
-      this.onMove(e, true);
-    });
-    return d;
-  }
-
-  private cellAt(left: number, top: number) {
-    const r = this.deckEl!.getBoundingClientRect();
-    return { c: Math.round((left - r.left) / this.cs), r: Math.round((top - r.top) / this.cs), rect: r };
-  }
-
-  private onMove(e: PointerEvent, force = false) {
-    const d = this.drag;
-    if (!d || !this.deckEl || (!force && e.pointerId !== d.pid)) return;
-    if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) > 8) d.moved = true;
-    const left = e.clientX - d.offX, top = e.clientY - d.offY;
-    d.ghost.style.left = `${left}px`;
-    d.ghost.style.top = `${top}px`;
-    const { c, r, rect } = this.cellAt(left, top);
-    const over = e.clientX > rect.left - this.cs && e.clientX < rect.right + this.cs && e.clientY > rect.top - this.cs && e.clientY < rect.bottom + this.cs;
-    if (over && d.moved) {
-      const ok = this.layout.grid.fits(c, r, pw(d.p), ph(d.p), d.p.uid);
-      Object.assign(this.hl.style, { display: 'block', left: `${rect.left + c * this.cs}px`, top: `${rect.top + r * this.cs}px`, width: `${pw(d.p) * this.cs}px`, height: `${ph(d.p) * this.cs}px` });
-      this.hl.classList.toggle('bad', !ok);
-      d.ghost.classList.remove('trashing');
-    } else {
-      this.hl.style.display = 'none';
-      d.ghost.classList.toggle('trashing', d.moved && !d.isNew);
-    }
-  }
-
-  private onUp(e: PointerEvent) {
-    const d = this.drag;
-    if (!d || e.pointerId !== d.pid) return;
-    const L = this.layout;
-    if (!d.moved && performance.now() - d.t0 < 400) {
-      if (!d.isNew) L.move(d.p, d.p.c, d.p.r, !d.p.rot);   // tap = rotate in place if it fits
-    } else if (this.deckEl) {
-      const { c, r, rect } = this.cellAt(e.clientX - d.offX, e.clientY - d.offY);
-      const over = e.clientX > rect.left - this.cs && e.clientX < rect.right + this.cs && e.clientY > rect.top - this.cs && e.clientY < rect.bottom + this.cs;
-      if (over) {
-        if (d.isNew) { d.p.c = c; d.p.r = r; L.place(d.p); } else L.move(d.p, c, r, d.p.rot);
-      } else if (!d.isNew) L.remove(d.p);   // dragged off the hull: back to the spares
-    }
-    d.ghost.remove();
-    this.drag = null;
-    this.hl.style.display = 'none';
-    this.onSave?.();
-    this.render();
   }
 }

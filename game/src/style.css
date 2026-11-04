@@ -189,6 +189,43 @@ html, body { background: #0b1414; }
 .btn-go svg { position: absolute; right: -18px; top: 50%; width: 110px; height: 110px; margin-top: -55px; color: rgba(34, 23, 15, .35); animation: helm 14s linear infinite; }
 @keyframes helm { to { transform: rotate(360deg); } }
 .hub-toast { z-index: 30; }
+/* refit (3D) */
+.refit { position: absolute; inset: 0; z-index: 15; pointer-events: none; }
+.refit > * { pointer-events: auto; }
+.refit-head { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 14px; padding: calc(8px + var(--sat)) calc(16px + var(--sar)) 8px calc(16px + var(--sal)); background: linear-gradient(rgba(14, 24, 24, .85), rgba(14, 24, 24, 0)); z-index: 2; }
+.refit-title { font: 400 24px var(--f-display); letter-spacing: .08em; text-shadow: 0 2px 0 #000; }
+.seg { display: flex; margin-left: auto; border: 2.5px solid var(--ink); border-radius: 5px; overflow: hidden; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); }
+.seg button { font: 400 16px var(--f-display); padding: 7px 16px; background: rgba(222, 206, 170, .88); color: #5c5040; border: 0; border-left: 2px solid var(--ink); cursor: pointer; }
+.seg button:first-child { border-left: 0; }
+.seg button.on { background: var(--rust); color: var(--bone); text-shadow: 0 2px 0 var(--ink); }
+.refit-deck { position: absolute; left: 0; right: 0; top: 52px; bottom: 124px; touch-action: none; z-index: 0; }
+.refit-stats { position: absolute; left: calc(16px + var(--sal)); top: 62px; margin: 0; display: grid; grid-template-columns: auto auto; gap: 2px 10px; padding: 8px 12px; background: rgba(14, 24, 24, .7); border: 2px solid rgba(228, 216, 188, .3); border-radius: 4px; font-size: 12px; z-index: 1; pointer-events: none; }
+.refit-stats dt { color: var(--bone-dim); }
+.refit-stats dd { margin: 0; font: 500 13px var(--f-mono); color: var(--bone); text-align: right; }
+.refit-info { position: absolute; right: calc(16px + var(--sar)); top: 62px; width: 230px; display: grid; gap: 2px; font-size: 12px; color: var(--bone-dim); line-height: 1.45; z-index: 1; pointer-events: none; text-shadow: 0 1px 2px #000; }
+.refit-info:not(:empty) { padding: 8px 12px; background: rgba(14, 24, 24, .7); border: 2px solid rgba(228, 216, 188, .3); border-radius: 4px; }
+.refit-info b { color: var(--bone); font: 400 17px var(--f-display); }
+.tray { position: absolute; left: 0; right: 0; bottom: 0; height: 124px; padding: 6px calc(16px + var(--sar)) calc(8px + var(--sab)) calc(16px + var(--sal)); background: linear-gradient(rgba(20, 18, 14, .82), rgba(20, 18, 14, .95)); border-top: 3px solid var(--ink); box-shadow: 0 -2px 0 rgba(228, 216, 188, .12) inset; display: grid; grid-template-rows: auto 1fr; gap: 4px; z-index: 1; }
+.tray-hint { margin: 0; font-size: 12px; color: var(--bone-dim); }
+.tray-list { display: flex; gap: 10px; overflow-x: auto; align-items: stretch; padding-bottom: 2px; }
+.card-m, .card-h { flex: none; display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 8px; background: rgba(222, 206, 170, .95); color: var(--ink); border: 2.5px solid var(--ink); border-radius: 5px; box-shadow: 0 3px 0 rgba(0, 0, 0, .4); font-family: var(--f-display); text-align: left; cursor: grab; touch-action: none; }
+.card-m.empty { opacity: .5; cursor: default; }
+.card-h { cursor: pointer; min-width: 230px; }
+.card-h.on { box-shadow: 0 0 0 3px var(--signal), 0 3px 0 rgba(0, 0, 0, .4); }
+.card-h.locked { filter: grayscale(.7); opacity: .7; }
+.ct { display: grid; gap: 1px; }
+.ct b { font-weight: 400; font-size: 17px; }
+.ct small { font: 11px var(--f-body); color: #5c5040; white-space: nowrap; }
+.ct em { font-style: normal; font-size: 13px; color: var(--rust); display: flex; align-items: center; gap: 4px; }
+.ct em svg { width: 13px; height: 13px; }
+.card-h.on .ct em { color: #3c6b4a; }
+.shape { --cs: 13px; display: grid; grid-template-columns: repeat(var(--w), var(--cs)); grid-template-rows: repeat(var(--h), var(--cs)); gap: 2px; flex: none; }
+.shape b { border: 1.5px solid var(--ink); border-radius: 2px; }
+.hull-shape { --cs: 9px; padding: 3px; border: 2px solid var(--ink); border-radius: 40% 40% 4px 4px / 22% 22% 4px 4px; background: #a98d66; }
+.hull-shape b { background: rgba(34, 23, 15, .18); border-width: 1px; }
+.refit-ghost { position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none; opacity: 0; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .5)); }
+.refit-ghost.show { opacity: .9; }
+.refit-ghost.off { opacity: .45; filter: grayscale(.8); }
 /* sheets */
 .sheet { position: absolute; inset: 0; display: none; flex-direction: column; pointer-events: auto; background: linear-gradient(90deg, rgba(14, 24, 24, .94) 0%, rgba(14, 24, 24, .82) 60%, rgba(14, 24, 24, .5) 100%); padding: calc(8px + var(--sat)) calc(16px + var(--sar)) calc(10px + var(--sab)) calc(16px + var(--sal)); gap: 8px; }
 .sheet.open { display: flex; }
@@ -258,6 +295,14 @@ html, body { background: #0b1414; }
 .compact .btn-go { width: 210px; height: 78px; padding-left: 20px; }
 .compact .btn-go b { font-size: 28px; }
 .compact .btn-go svg { width: 90px; height: 90px; margin-top: -45px; }
+.compact .refit-head { padding-top: calc(5px + var(--sat)); padding-bottom: 5px; }
+.compact .refit-title { font-size: 19px; }
+.compact .seg button { font-size: 14px; padding: 5px 11px; }
+.compact .refit-deck { top: 44px; bottom: 104px; }
+.compact .refit-stats, .compact .refit-info { top: 50px; }
+.compact .refit-info { width: 190px; }
+.compact .tray { height: 104px; padding-top: 4px; }
+.compact .ct b { font-size: 15px; }
 .compact .sheet-head b { font-size: 20px; }
 .compact .btn-back { font-size: 15px; padding: 4px 10px 4px 4px; }
 .compact .map-card { padding: 8px 10px; gap: 4px; }

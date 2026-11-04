@@ -7,6 +7,7 @@ import { CAMP_SEA } from './world/maps';
 import { levelOf, runXp } from './core/progress';
 import { Game } from './game';
 import { Hub } from './ui/hub';
+import { Refit } from './ui/refit';
 import { showResult } from './ui/screens';
 import { fitStage } from './core/view';
 
@@ -30,8 +31,8 @@ async function boot() {
   buildTextures();
 
   const save = loadSave();
-  const layout = Layout.from(save.layout, save.owned);
-  const persist = () => { save.layout = layout.toJSON(); save.owned = layout.owned; writeSave(save); };
+  const layout = Layout.from(save.layout, save.owned, save.hull);
+  const persist = () => { save.layout = layout.toJSON(); save.owned = layout.owned; save.hull = layout.hull.id; writeSave(save); };
 
   const ui = document.getElementById('ui')!;
   const game = new Game(document.getElementById('gl') as HTMLCanvasElement, ui);
@@ -39,7 +40,10 @@ async function boot() {
   const toCamp = () => { game.load(CAMP_SEA, layout, false, 7); hub.show(); };
 
   hub.onPickMap = (m) => { save.mapId = m.id; persist(); };
-  hub.onSave = () => { persist(); game.rebuildBoat(layout); };
+  const refit = new Refit(ui, layout, game, () => levelOf(save.xp).lv);
+  hub.onRefit = () => { hub.hide(); refit.open(); };
+  refit.onClose = () => hub.show();
+  refit.onChange = () => { persist(); game.rebuildBoat(layout); };
   hub.onDepart = (map) => { hub.hide(); persist(); game.load(map, layout, true); };
   game.onRunEnd = (r) => {
     for (const it of r.kept) save.stash[it.def.kind] = (save.stash[it.def.kind] ?? 0) + 1;
@@ -59,6 +63,6 @@ async function boot() {
   document.getElementById('loading')?.remove();
   hub.show();
   (window as unknown as { game: Game; hub: Hub; layout: Layout }).game = game;
-  Object.assign(window, { hub, layout });
+  Object.assign(window, { hub, layout, refit });
 }
 boot();

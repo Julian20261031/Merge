@@ -17,10 +17,10 @@ export class Hold {
   onChange(f: () => void) { this.listeners.push(f); }
   emit() { this.listeners.forEach((f) => f()); }
 
-  setup(boxes: Placed[]) {
+  setup(boxes: Placed[], deckW: number) {
     this.containers = boxes.map((b, i) => {
       const [w, h] = MODS.cargo.cargo!;
-      return { id: `cargo${i}`, index: i, side: sideOf(b), grid: new Grid(w, h), safe: false };
+      return { id: `cargo${i}`, index: i, side: sideOf(b, deckW), grid: new Grid(w, h), safe: false };
     });
     this.containers.push({ id: 'safe', index: 0, side: 0, grid: new Grid(SAFE_SIZE[0], SAFE_SIZE[1]), safe: true });
     this.items = [];
