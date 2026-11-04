@@ -2,7 +2,7 @@
 // everything about the boat's shape is derived from the grid so modules always sit on the cells you see.
 import { StrKey } from '../i18n/zh';
 
-export type HullId = 'skiff' | 'trawler' | 'barge';
+export type HullId = 'dinghy' | 'skiff' | 'trawler' | 'barge';
 export interface HullDef {
   id: HullId; name: StrKey; desc: StrKey;
   w: number; h: number;          // deck grid, columns × rows (row 0 = bow)
@@ -13,12 +13,13 @@ export interface HullDef {
 }
 
 export const HULLS: Record<HullId, HullDef> = {
-  skiff: { id: 'skiff', name: 'hull_skiff', desc: 'hulld_skiff', w: 3, h: 5, hp: 85, speed: 17.5, turn: 1.25, bow: 1.15, unlock: 1, drums: false },
-  trawler: { id: 'trawler', name: 'hull_trawler', desc: 'hulld_trawler', w: 3, h: 6, hp: 120, speed: 15, turn: 1, bow: 1, unlock: 1, drums: true },
-  barge: { id: 'barge', name: 'hull_barge', desc: 'hulld_barge', w: 4, h: 7, hp: 175, speed: 12.5, turn: 0.78, bow: 0.65, unlock: 3, drums: true },
+  dinghy: { id: 'dinghy', name: 'hull_dinghy', desc: 'hulld_dinghy', w: 3, h: 3, hp: 70, speed: 14, turn: 1.3, bow: 0.75, unlock: 1, drums: false },
+  skiff: { id: 'skiff', name: 'hull_skiff', desc: 'hulld_skiff', w: 3, h: 5, hp: 90, speed: 17.5, turn: 1.25, bow: 1.15, unlock: 2, drums: false },
+  trawler: { id: 'trawler', name: 'hull_trawler', desc: 'hulld_trawler', w: 3, h: 6, hp: 120, speed: 15, turn: 1, bow: 1, unlock: 3, drums: true },
+  barge: { id: 'barge', name: 'hull_barge', desc: 'hulld_barge', w: 4, h: 7, hp: 175, speed: 12.5, turn: 0.78, bow: 0.65, unlock: 5, drums: true },
 };
-export const HULL_ORDER: HullId[] = ['skiff', 'trawler', 'barge'];
-export const DEFAULT_HULL: HullId = 'trawler';
+export const HULL_ORDER: HullId[] = ['dinghy', 'skiff', 'trawler', 'barge'];
+export const DEFAULT_HULL: HullId = 'dinghy';
 
 export const DECK = 1.4, CELL = 4;
 

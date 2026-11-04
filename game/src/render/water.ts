@@ -49,7 +49,7 @@ export function createWater() {
     uR: { value: Array.from({ length: N_CALM }, () => new THREE.Vector4(1e4, 1e4, 0.1, 0.1)) },
     uA: { value: new Array(N_CALM).fill(0) },
     uFlow: { value: new THREE.Vector2(0, 0) },
-    uBoat: { value: new THREE.Vector2() }, uFwd: { value: new THREE.Vector2(0, -1) }, uWake: { value: 0 },
+    uBoat: { value: new THREE.Vector2() }, uFwd: { value: new THREE.Vector2(0, -1) }, uWake: { value: 0 }, uBow: { value: 20.5 },
     uTrail: { value: Array.from({ length: N_TRAIL }, () => new THREE.Vector4(1e4, 1e4, 99, 0)) },
     uTrailF: { value: Array.from({ length: N_TRAIL }, () => new THREE.Vector2(0, -1)) },
     uDeep: { value: new THREE.Color(0x14292a) }, uMid: { value: new THREE.Color(0x2f625b) },
@@ -78,7 +78,7 @@ export function createWater() {
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: GLSL_COMMON + `
-      uniform vec2 uFlow, uBoat, uFwd; uniform float uWake; uniform vec4 uTrail[${N_TRAIL}]; uniform vec2 uTrailF[${N_TRAIL}]; uniform vec3 uDeep, uMid, uShal, uFoam, uFogC;
+      uniform vec2 uFlow, uBoat, uFwd; uniform float uWake, uBow; uniform vec4 uTrail[${N_TRAIL}]; uniform vec2 uTrailF[${N_TRAIL}]; uniform vec3 uDeep, uMid, uShal, uFoam, uFogC;
       varying vec3 vW, vN; varying float vH;
       float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
       float vn2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
@@ -136,7 +136,7 @@ export function createWater() {
         }
         // bow wave, attached to the hull
         vec2 bd = p - uBoat; float al = dot(bd, uFwd); float la = dot(bd, vec2(-uFwd.y, uFwd.x));
-        float b = 20.5 - al;
+        float b = uBow - al;
         if (b > 0.0 && b < 14.0) {
           float bow = 1.0 - smoothstep(0.25, 0.5, abs(abs(la) - (0.4 + b * 0.62)));
           wake = max(wake, bow * uWake * (1.0 - smoothstep(4.0, 14.0, b)) * smoothstep(0.3, 0.45, vn2(vec2(b * 0.6 - uTime * 1.5, la))));
@@ -152,7 +152,7 @@ export function createWater() {
   return {
     mesh,
     /** trail: newest first, each { x, z, born (sim time), strength 0..1 } */
-    update(t: number, center: THREE.Vector3, boat: { x: number; z: number; fx: number; fz: number; speed01: number }, trail: { x: number; z: number; born: number; k: number; fx: number; fz: number }[] = []) {
+    update(t: number, center: THREE.Vector3, boat: { x: number; z: number; fx: number; fz: number; speed01: number; bow?: number }, trail: { x: number; z: number; born: number; k: number; fx: number; fz: number }[] = []) {
       for (let i = 0; i < N_TRAIL; i++) {
         const tr = trail[i];
         if (tr) { uniforms.uTrail.value[i].set(tr.x, tr.z, t - tr.born, tr.k); uniforms.uTrailF.value[i].set(tr.fx, tr.fz); } else uniforms.uTrail.value[i].set(1e4, 1e4, 99, 0);
@@ -164,6 +164,7 @@ export function createWater() {
       uniforms.uFwd.value.set(boat.fx, boat.fz);
       uniforms.uFlow.value.set(-boat.fx * 1.3 * boat.speed01, -boat.fz * 1.3 * boat.speed01);
       uniforms.uWake.value = boat.speed01;
+      uniforms.uBow.value = boat.bow ?? 20.5;
       // the nearest drowned roofs get calm water, shallows and foam rings
       const near = CALM.map((c) => ({ c, d: Math.hypot(c.x - center.x, c.z - center.z) })).sort((a, b) => a.d - b.d).slice(0, N_CALM);
       for (let i = 0; i < N_CALM; i++) {

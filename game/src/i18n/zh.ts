@@ -137,6 +137,8 @@ export const zh = {
   tabWeapon: '武器安装',
   refitHint: '从下方拖到船上的格子里 · 轻点船上的模块旋转 · 拖出船外卸下',
   hullHint: '换船体后放不下的模块会退回备用',
+  hull_dinghy: '拼装小艇',
+  hulld_dinghy: '用废铁和浮桶拼起来的小艇，只放得下几样东西。先用它攒家底。',
   hull_skiff: '锈皮快艇',
   hulld_skiff: '小而快，转向灵活，但经不起几下打。',
   hull_trawler: '拖网渔船',

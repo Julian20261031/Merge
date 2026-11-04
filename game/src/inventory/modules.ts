@@ -29,13 +29,11 @@ const fixedFor = (H: HullDef): Omit<Placed, 'uid'>[] => [
   { type: 'engine', c: Math.floor((H.w - 3) / 2), r: H.h - 1, rot: false },
   { type: 'safe', c: Math.floor(H.w / 2), r: H.h - 2, rot: false },
 ];
+// the starter dinghy (3×3): a machine gun and a bow gun up front, one cargo box; engine and safe box fill the rest
 const DEFAULT_LAYOUT: Omit<Placed, 'uid'>[] = [
+  { type: 'gun', c: 0, r: 0, rot: false },
   { type: 'cannon', c: 1, r: 0, rot: false },
-  { type: 'gun', c: 0, r: 1, rot: false },
-  { type: 'armor', c: 2, r: 1, rot: false },
-  { type: 'cargo', c: 1, r: 1, rot: false },
-  { type: 'cargo', c: 0, r: 3, rot: false },
-  { type: 'fuel', c: 2, r: 3, rot: false },
+  { type: 'cargo', c: 2, r: 0, rot: false },
 ];
 const DEFAULT_OWNED: Record<string, number> = { cannon: 2, gun: 2, armor: 2, cargo: 4, fuel: 3 };
 

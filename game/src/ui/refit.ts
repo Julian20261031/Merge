@@ -47,18 +47,21 @@ export class Refit {
     back.type = 'button';
     back.addEventListener('click', () => this.close());
     h('b', 'refit-title', head, t('tabDock'));
-    const seg = h('nav', 'seg', head);
-    for (const [k, key] of [['hull', 'tabHull'], ['equip', 'tabEquip'], ['weapon', 'tabWeapon']] as [Tab, StrKey][]) {
-      const b = h('button', '', seg, t(key)) as HTMLButtonElement;
+    // left: the three refit modes, stacked
+    const seg = h('nav', 'refit-tabs', this.root);
+    for (const [k, key, icon] of [['hull', 'tabHull', 'ship'], ['equip', 'tabEquip', 'crate'], ['weapon', 'tabWeapon', 'gun']] as [Tab, StrKey, keyof typeof ICONS][]) {
+      const b = h('button', '', seg, `${ICONS[icon]}<span>${t(key)}</span>`) as HTMLButtonElement;
       b.type = 'button';
       b.addEventListener('click', () => this.setTab(k));
       this.tabs.set(k, b);
     }
-    this.stats = h('dl', 'refit-stats', this.root);
+    // right: what you picked, then the boat's numbers
+    const side = h('aside', 'refit-side', this.root);
+    this.info = h('div', 'refit-info', side);
+    this.stats = h('dl', 'refit-stats', side);
     // the deck: touches here pick up modules already on the boat
     const deck = h('div', 'refit-deck', this.root);
     deck.addEventListener('pointerdown', (e) => this.onDeckDown(e));
-    this.info = h('div', 'refit-info', this.root);
     const tray = h('div', 'tray', this.root);
     this.hint = h('p', 'tray-hint', tray);
     this.list = h('div', 'tray-list', tray);

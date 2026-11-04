@@ -226,10 +226,13 @@ export class Game {
   private refitCam(out: { pos: THREE.Vector3; aim: THREE.Vector3 }) {
     const g = hullGeom(this.layout.hull), pitch = 1.0, tanH = Math.tan((this.camera.fov / 2) * Math.PI / 180);
     const compact = view.h < 460, top = compact ? 46 : 56, bottom = compact ? 108 : 128, fv = Math.max(0.3, (view.h - top - bottom) / view.h);
-    const len = g.stern - g.bowTip + 8, wid = g.hw * 2 + 7;
-    const d = Math.max(wid * Math.sin(pitch) / (2 * tanH * fv), len / (2 * tanH * this.camera.aspect * 0.86));
-    const shift = ((bottom - top) / 2) * (2 * tanH * d / view.h) / Math.sin(pitch);
-    out.aim.set(this.s.x + shift, DECK, this.s.z + (g.bowTip + g.stern) / 2);
+    // the mode tabs take the left edge and the info panel the right: frame the boat in the gap between them
+    const left = compact ? 120 : 140, right = compact ? 200 : 230, fh = Math.max(0.3, (view.w - left - right) / view.w);
+    const len = g.stern - g.bowTip + 6, wid = g.hw * 2 + 7;
+    const d = Math.min(95, Math.max(wid * Math.sin(pitch) / (2 * tanH * fv), len / (2 * tanH * this.camera.aspect * fh)));
+    const px = 2 * tanH * d / view.h;   // world units per pixel at the aim point
+    const shift = ((bottom - top) / 2) * px / Math.sin(pitch);
+    out.aim.set(this.s.x + shift, DECK, this.s.z + (g.bowTip + g.stern) / 2 - ((right - left) / 2) * px);
     out.pos.set(out.aim.x + Math.cos(pitch) * d, Math.sin(pitch) * d, out.aim.z);
   }
 
@@ -420,12 +423,13 @@ export class Game {
     this.trailT += sdt;
     if (this.trailT >= TRAIL_EVERY) {
       this.trailT = 0;
-      this.trail.unshift({ x: s.x - fx * 15, z: s.z - fz * 15, born: this.T, k: speed01, fx, fz });
+      const sternK = hullGeom(this.layout.hull).stern - 1;
+      this.trail.unshift({ x: s.x - fx * sternK, z: s.z - fz * sternK, born: this.T, k: speed01, fx, fz });
       if (this.trail.length > N_TRAIL) this.trail.length = N_TRAIL;
     }
 
     this.world.update(this.T, sdt);
-    this.water.update(this.T, this.camLook, { x: s.x, z: s.z, fx, fz, speed01 }, this.trail);
+    this.water.update(this.T, this.camLook, { x: s.x, z: s.z, fx, fz, speed01, bow: -hullGeom(this.layout.hull).bowTip }, this.trail);
 
     // camera: north-up, a little ahead of the boat
     const dist = 135, phi = 0.8;
